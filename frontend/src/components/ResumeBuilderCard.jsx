@@ -1,0 +1,3 @@
+import { ArrowRight, Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
+export default function ResumeBuilderCard() { return <section className="rounded-2xl border border-emerald-100 bg-emerald-50 p-7"><Sparkles className="text-emerald-700"/><h2 className="mt-4 text-2xl font-bold">AI Resume Builder</h2><p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">Create a polished engineering resume with AI suggestions for projects, skills, and impact statements.</p><Link to="/resume/create" className="mt-5 inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-5 py-3 text-sm font-semibold text-white">Create Resume with AI <ArrowRight size={16}/></Link></section>; }

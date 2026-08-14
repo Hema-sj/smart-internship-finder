@@ -1,4 +1,4 @@
 import { Outlet } from 'react-router-dom';
-import Header from '../components/Header';
+import Navbar from '../components/Navbar';
 
-export default function AppLayout() { return <div><Header /><main className="mx-auto max-w-6xl px-6 py-12"><Outlet /></main></div>; }
+export default function AppLayout() { return <div><Navbar /><main className="mx-auto max-w-7xl px-5 py-10"><Outlet /></main></div>; }

@@ -1,0 +1,2 @@
+const stats = [['1,248', 'Total Internships'], ['938', 'Paid Internships'], ['310', 'Unpaid Internships'], ['7', 'Locations'], ['74', 'Companies']];
+export default function StatsCards() { return <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">{stats.map(([value, label]) => <article key={label} className="rounded-xl border border-slate-200 bg-white p-5"><p className="text-2xl font-bold text-emerald-700">{value}</p><p className="mt-1 text-xs font-medium text-slate-600">{label}</p></article>)}</section>; }
