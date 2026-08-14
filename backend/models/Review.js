@@ -1,14 +1,11 @@
 import mongoose from 'mongoose';
 
 const reviewSchema = new mongoose.Schema({
-  author: { type: mongoose.Schema.Types.ObjectId, ref: 'StudentProfile', required: true },
-  company: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },
-  internship: { type: mongoose.Schema.Types.ObjectId, ref: 'Internship' },
+  studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'StudentProfile', required: true },
+  companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true, index: true },
   rating: { type: Number, required: true, min: 1, max: 5 },
-  title: { type: String, trim: true, maxlength: 160 },
-  comment: { type: String, required: true, trim: true, maxlength: 2000 },
-  isApproved: { type: Boolean, default: false }
+  comment: { type: String, required: true, trim: true, maxlength: 2000 }
 }, { timestamps: true });
 
-reviewSchema.index({ author: 1, company: 1, internship: 1 }, { unique: true });
+reviewSchema.index({ studentId: 1, companyId: 1 }, { unique: true });
 export default mongoose.model('Review', reviewSchema);

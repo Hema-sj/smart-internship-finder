@@ -1,13 +1,12 @@
 import mongoose from 'mongoose';
 
 const applicationSchema = new mongoose.Schema({
-  student: { type: mongoose.Schema.Types.ObjectId, ref: 'StudentProfile', required: true },
-  internship: { type: mongoose.Schema.Types.ObjectId, ref: 'Internship', required: true },
-  resume: { type: mongoose.Schema.Types.ObjectId, ref: 'Resume' },
-  status: { type: String, enum: ['saved', 'applied', 'shortlisted', 'interviewing', 'offered', 'rejected', 'withdrawn'], default: 'applied' },
-  appliedAt: { type: Date, default: Date.now },
-  notes: { type: String, maxlength: 1000 }
+  studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'StudentProfile', required: true, index: true },
+  internshipId: { type: mongoose.Schema.Types.ObjectId, ref: 'Internship', required: true, index: true },
+  companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true, index: true },
+  appliedDate: { type: Date, default: Date.now },
+  status: { type: String, enum: ['Applied', 'Under Review', 'Shortlisted', 'Interview', 'Selected', 'Rejected'], default: 'Applied', index: true }
 }, { timestamps: true });
 
-applicationSchema.index({ student: 1, internship: 1 }, { unique: true });
+applicationSchema.index({ studentId: 1, internshipId: 1 }, { unique: true });
 export default mongoose.model('Application', applicationSchema);
