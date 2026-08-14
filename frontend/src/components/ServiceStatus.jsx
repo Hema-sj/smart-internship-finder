@@ -1,0 +1,1 @@
+export default function ServiceStatus({ status }) { return <div className="mt-6 rounded-lg border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-800"><strong>API status:</strong> {status}</div>; }
