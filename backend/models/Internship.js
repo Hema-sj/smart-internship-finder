@@ -19,10 +19,12 @@ const internshipSchema = new mongoose.Schema({
   applicationUrl: { type: String, required: true, trim: true },
   rating: { type: Number, min: 0, max: 5, default: 0 },
   reviewCount: { type: Number, min: 0, default: 0 },
+  aiMatch: { type: Number, min: 0, max: 100, default: 0 },
   status: { type: String, enum: ['Draft', 'Open', 'Closed'], default: 'Draft', index: true }
 }, { timestamps: true });
 
 internshipSchema.index({ title: 'text', description: 'text', course: 'text' });
 internshipSchema.index({ startDate: 1 });
 internshipSchema.index({ requiredSkills: 1 });
+internshipSchema.index({ aiMatch: -1, createdAt: -1 });
 export default mongoose.model('Internship', internshipSchema);
