@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Internly — Smart Internship Finder</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#"><span class="brand-mark">⌁</span> internly</a>
+      <nav><a class="active" href="#discover">Discover</a><a href="#skills">Skills</a><a href="#analyzer">Dream Company</a></nav>
+      <div class="profile"><button class="bell" aria-label="Notifications">♢</button><div class="avatar">AK</div><span>Arjun Kumar</span><span class="chev">⌄</span></div>
+    </header>
+
+    <main>
+      <section class="hero" id="discover">
+        <div class="eyebrow">YOUR CAREER, CURATED</div>
+        <h1>Find the internship<br /><em>made for you.</em></h1>
+        <p>AI-powered matches that turn your skills into your next great opportunity.</p>
+        <div class="search-panel">
+          <label><span>⌕</span><input id="search" placeholder="Search roles, skills, or companies" /></label>
+          <label class="location"><span>⌖</span><select id="location"><option>Bengaluru, India</option><option>Hyderabad, India</option><option>Mumbai, India</option><option>Remote</option></select></label>
+          <button id="find-btn">Find matches <span>→</span></button>
+        </div>
+        <div class="quick"><span>Popular:</span><button>Software Engineering</button><button>Product Design</button><button>Data Science</button></div>
+      </section>
+
+      <section class="workspace">
+        <aside class="sidebar">
+          <div class="resume-card">
+            <div class="resume-top"><span class="doc-icon">✦</span><span class="resume-dots">•••</span></div>
+            <h3>My Resume</h3><p id="resume-name">arjun_kumar_resume.pdf</p>
+            <div class="resume-score"><span>Resume strength</span><b>82%</b></div><div class="meter"><i></i></div>
+            <label class="upload" for="resume-upload">Replace resume <input id="resume-upload" type="file" accept=".pdf,.doc,.docx" /></label>
+          </div>
+          <div class="side-group"><h4>INTERNSHIP TYPE</h4><label><input type="checkbox" checked /> Paid <small>124</small></label><label><input type="checkbox" /> Unpaid <small>38</small></label><label><input type="checkbox" /> Remote <small>76</small></label></div>
+          <div class="side-group"><h4>EXPERIENCE</h4><label><input type="radio" name="exp" checked /> Any experience</label><label><input type="radio" name="exp" /> Beginner friendly</label></div>
+        </aside>
+
+        <section class="results">
+          <div class="results-head"><div><p class="eyebrow">PERSONALIZED FOR YOU</p><h2><span id="match-count">14</span> great matches <span class="spark">✦</span></h2></div><button class="sort">Best match <span>⌄</span></button></div>
+          <div class="tabs"><button class="tab active" data-tab="all">All opportunities <b>162</b></button><button class="tab" data-tab="paid">Paid <b>124</b></button><button class="tab" data-tab="unpaid">Unpaid <b>38</b></button></div>
+          <div class="cards" id="cards"></div>
+          <button class="show-more">Show 11 more matches <span>↓</span></button>
+        </section>
+      </section>
+
+      <section class="skills-section" id="skills">
+        <div class="section-intro"><p class="eyebrow">LOCAL MARKET INTELLIGENCE</p><h2>Skills rising in <em>Bengaluru</em></h2><p>Based on 2,400+ active engineering internships near you.</p></div>
+        <div class="skill-grid"><article><div class="skill-num">01</div><h3>Cloud & DevOps</h3><p>AWS, Docker, Kubernetes</p><b>+32% demand</b></article><article><div class="skill-num">02</div><h3>AI / Machine Learning</h3><p>Python, TensorFlow, LLMs</p><b>+28% demand</b></article><article><div class="skill-num">03</div><h3>Product Thinking</h3><p>Figma, research, analytics</p><b>+21% demand</b></article></div>
+      </section>
+
+      <section class="analyzer" id="analyzer">
+        <div><p class="eyebrow">DREAM COMPANY ANALYZER</p><h2>What will it take to get there?</h2><p>See the exact skills and experiences to focus on for your dream company.</p></div>
+        <div class="analyzer-action"><input id="company-input" value="Google" /><button id="analyze-btn">Analyze my path <span>→</span></button></div>
+      </section>
+    </main>
+    <div class="modal" id="modal" aria-hidden="true"><div class="modal-box"><button class="close" id="close-modal">×</button><p class="eyebrow">DREAM COMPANY ANALYZER</p><h2>Your path to <em id="company-name">Google</em></h2><div class="analysis-score"><span>Readiness</span><b>68%</b><div class="meter"><i></i></div></div><h3>Priority skill gaps</h3><div class="gap-list"><span>System design <b>High impact</b></span><span>Data structures & algorithms <b>Practice</b></span><span>Cloud architecture <b>Build projects</b></span></div><button id="modal-done">Start my plan →</button></div></div>
+    <script src="app.js"></script>
+  </body>
+</html>
