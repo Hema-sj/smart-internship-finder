@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Search, SlidersHorizontal, MapPin, BookOpen, Calendar,
   ChevronLeft, ChevronRight, Loader2, AlertCircle, X, ArrowUpDown
@@ -23,7 +24,7 @@ const COMP_TABS = [
   { value: 'Unpaid', label: 'Unpaid' },
 ];
 
-const LOCATIONS = ['Bangalore', 'Chennai', 'Coimbatore', 'Hyderabad', 'Pune', 'Mumbai', 'Remote'];
+const LOCATIONS = ['Chennai', 'Bangalore', 'Coimbatore', 'Hyderabad', 'Pune', 'Mumbai', 'Delhi', 'Kochi', 'Remote'];
 
 const COURSES = [
   'Software Engineering', 'Data Science', 'Frontend Development', 'Backend Development',
@@ -131,9 +132,11 @@ function Pagination({ page, pages, onPage }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function InternshipListPage() {
-  // Filters
+  const [searchParams] = useSearchParams();
+
+  // Filters — seed location from URL query param (?location=Chennai)
   const [compensationType, setCompensationType] = useState('All');
-  const [location, setLocation] = useState('');
+  const [location, setLocation] = useState(() => searchParams.get('location') || '');
   const [course, setCourse] = useState('');
   const [startDate, setStartDate] = useState('');
   const [keyword, setKeyword] = useState('');
@@ -199,13 +202,17 @@ export default function InternshipListPage() {
 
   const hasFilters = location || course || startDate || keyword || compensationType !== 'All';
 
+  // Dynamic title
+  const pageTitle = location ? `Internships in ${location}` : 'Internship Listings';
+  const pageLabel = location ? location : 'Browse';
+
   return (
     <div className="space-y-6">
       {/* Page header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-emerald-700">Browse</p>
-          <h1 className="mt-1 text-3xl font-extrabold text-slate-900">Internship Listings</h1>
+          <p className="text-xs font-bold uppercase tracking-widest text-emerald-700">{pageLabel}</p>
+          <h1 className="mt-1 text-3xl font-extrabold text-slate-900">{pageTitle}</h1>
           {!loading && (
             <p className="mt-1 text-sm text-slate-500">
               {pagination.total} opportunities found
@@ -213,8 +220,27 @@ export default function InternshipListPage() {
             </p>
           )}
         </div>
+      </div>
 
-        {/* Sort */}
+      {/* Compensation tabs & Sort */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex gap-1 rounded-xl border border-slate-200 bg-white p-1 w-fit shadow-sm">
+          {COMP_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              id={`comp-tab-${tab.value.toLowerCase()}`}
+              onClick={() => setFilter(setCompensationType)(tab.value)}
+              className={`rounded-lg px-6 py-2.5 text-sm font-bold transition ${
+                compensationType === tab.value
+                  ? 'bg-emerald-700 text-white shadow-sm'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         <div className="flex items-center gap-2">
           <ArrowUpDown size={14} className="text-slate-400" />
           <select
@@ -261,24 +287,6 @@ export default function InternshipListPage() {
           <SlidersHorizontal size={16} />
           Filters {hasFilters && <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-600 text-[10px] font-bold text-white">{activeFilters.length + (compensationType !== 'All' ? 1 : 0)}</span>}
         </button>
-      </div>
-
-      {/* Compensation tabs */}
-      <div className="flex gap-1 rounded-xl border border-slate-200 bg-white p-1 w-fit shadow-sm">
-        {COMP_TABS.map((tab) => (
-          <button
-            key={tab.value}
-            id={`comp-tab-${tab.value.toLowerCase()}`}
-            onClick={() => setFilter(setCompensationType)(tab.value)}
-            className={`rounded-lg px-5 py-2 text-sm font-bold transition ${
-              compensationType === tab.value
-                ? 'bg-emerald-700 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
       </div>
 
       {/* Advanced filters (desktop always visible, mobile toggleable) */}

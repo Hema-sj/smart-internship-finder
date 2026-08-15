@@ -1,11 +1,24 @@
 import { Router } from 'express';
-import { getInternship, listInternships, listInternshipsByLocation, listPaidInternships, listUnpaidInternships } from '../controllers/internshipController.js';
+import {
+  listInternships,
+  getInternship,
+  listPaidInternships,
+  listUnpaidInternships,
+  listInternshipsByLocation,
+  listLocations,
+} from '../controllers/internshipController.js';
 
 const router = Router();
-router.get('/', listInternships);
-router.get('/search', listInternships);
-router.get('/paid', listPaidInternships);
-router.get('/unpaid', listUnpaidInternships);
+
+// Stats endpoints — must come before /:id
+router.get('/locations',          listLocations);
+router.get('/search',             listInternships);
+router.get('/paid',               listPaidInternships);
+router.get('/unpaid',             listUnpaidInternships);
 router.get('/location/:location', listInternshipsByLocation);
+
+// List & detail
+router.get('/',    listInternships);
 router.get('/:id', getInternship);
+
 export default router;

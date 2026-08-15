@@ -9,4 +9,4 @@ export const internships = [
   { id: 8, title: 'AI Research Intern', company: 'Sarvam AI', location: 'Remote', type: 'Unpaid', stipend: 'Certificate', skills: ['LLMs', 'Python'], startDate: '2026-07-15', course: 'AI Research', certificateType: 'No Certificate', aiMatch: 80 }
 ];
 
-export const popularLocations = ['Chennai', 'Bangalore', 'Coimbatore', 'Hyderabad', 'Pune', 'Mumbai', 'Remote'];
+export const popularLocations = ['Chennai', 'Bangalore', 'Coimbatore', 'Hyderabad', 'Pune', 'Mumbai', 'Delhi', 'Kochi', 'Remote'];
