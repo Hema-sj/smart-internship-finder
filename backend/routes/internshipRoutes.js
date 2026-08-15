@@ -6,18 +6,20 @@ import {
   listUnpaidInternships,
   listInternshipsByLocation,
   listLocations,
+  getStats,
 } from '../controllers/internshipController.js';
 
 const router = Router();
 
-// Stats endpoints — must come before /:id
+// ── Specific named routes MUST come before /:id ──────────────────────────────
 router.get('/locations',          listLocations);
-router.get('/search',             listInternships);
+router.get('/stats',              getStats);
 router.get('/paid',               listPaidInternships);
 router.get('/unpaid',             listUnpaidInternships);
+router.get('/search',             listInternships);
 router.get('/location/:location', listInternshipsByLocation);
 
-// List & detail
+// ── Generic list & detail ─────────────────────────────────────────────────────
 router.get('/',    listInternships);
 router.get('/:id', getInternship);
 

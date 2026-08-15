@@ -1,96 +1,222 @@
+/**
+ * Internship controller
+ * - Full-text search across title, course, description, company name
+ * - Filters: location, course, compensationType, certificateType, startDate, skill
+ * - Sorting: bestMatch, newest, startingSoon, highestStipend
+ * - Pagination with configurable limit (max 50)
+ * - Location stats aggregation
+ */
+import mongoose  from 'mongoose';
 import Internship from '../models/Internship.js';
-import '../models/Company.js'; // register Company schema for populate()
-import '../models/Skill.js';   // register Skill schema for populate()
+import Company    from '../models/Company.js';     // must be imported to register schema
+import '../models/Skill.js';                        // must be imported to register schema
 
-
-const sortOptions = {
+// ─── Sort presets ─────────────────────────────────────────────────────────────
+const SORT_PRESETS = {
   bestMatch:      { aiMatch: -1, createdAt: -1 },
   newest:         { createdAt: -1 },
-  startingSoon:   { startDate: 1 },
-  highestStipend: { stipend: -1 },
+  startingSoon:   { startDate: 1, createdAt: -1 },
+  highestStipend: { stipend: -1, createdAt: -1 },
 };
 
-function buildFilters(query, overrides = {}) {
+// ─── Filter builder ───────────────────────────────────────────────────────────
+async function buildFilters(query, overrides = {}) {
   const filters = { status: 'Open' };
-  const compensationType = overrides.compensationType ?? query.compensationType;
-  const location         = overrides.location ?? query.location;
 
-  if (compensationType && compensationType !== 'All') filters.compensationType = compensationType;
-  if (location)   filters.location = new RegExp(`^${location}$`, 'i');
-  if (query.course)     filters.course = new RegExp(query.course, 'i');
-  if (query.startDate)  filters.startDate = { $gte: new Date(query.startDate) };
-  if (query.keyword) {
-    filters.$or = [
-      { title:       new RegExp(query.keyword, 'i') },
-      { course:      new RegExp(query.keyword, 'i') },
-      { description: new RegExp(query.keyword, 'i') },
-    ];
+  // Allow caller to force a value (used by shorthand helpers)
+  const compensationType = overrides.compensationType ?? query.compensationType;
+  const location         = overrides.location         ?? query.location;
+
+  // ── Compensation ──
+  if (compensationType && compensationType !== 'All') {
+    filters.compensationType = compensationType;
   }
+
+  // ── Certificate type ──
+  if (query.certificateType && query.certificateType !== 'All') {
+    filters.certificateType = query.certificateType;
+  }
+
+  // ── Location (exact, case-insensitive) ──
+  if (location) {
+    filters.location = new RegExp(`^${location.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+  }
+
+  // ── Course (partial match) ──
+  if (query.course) {
+    filters.course = new RegExp(query.course.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+  }
+
+  // ── Starting date (on or after) ──
+  if (query.startDate) {
+    const d = new Date(query.startDate);
+    if (!isNaN(d)) filters.startDate = { $gte: d };
+  }
+
+  // ── Stipend range ──
+  if (query.minStipend) filters.stipend = { ...filters.stipend, $gte: Number(query.minStipend) };
+  if (query.maxStipend) filters.stipend = { ...filters.stipend, $lte: Number(query.maxStipend) };
+
+  // ── Skill IDs ──
+  if (query.skills) {
+    const skillIds = query.skills.split(',')
+      .map(s => s.trim())
+      .filter(s => mongoose.isValidObjectId(s))
+      .map(s => new mongoose.Types.ObjectId(s));
+    if (skillIds.length) filters.requiredSkills = { $in: skillIds };
+  }
+
+  // ── Keyword search (title, course, description + company name) ──
+  if (query.keyword) {
+    const kw = query.keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const kwRe = new RegExp(kw, 'i');
+
+    // Find companies matching the keyword
+    const matchingCompanies = await Company.find({ name: kwRe }).select('_id').limit(20);
+    const companyIds = matchingCompanies.map(c => c._id);
+
+    const textConditions = [
+      { title:       kwRe },
+      { course:      kwRe },
+      { description: kwRe },
+    ];
+    if (companyIds.length) textConditions.push({ companyId: { $in: companyIds } });
+
+    // Merge with any existing $or (e.g., from mode or status filters)
+    filters.$or = textConditions;
+  }
+
   return filters;
 }
 
-// GET /api/internships  |  GET /api/internships/search
+// ─── GET /api/internships   |   GET /api/internships/search ──────────────────
 export async function listInternships(request, response, next) {
   try {
-    const page  = Math.max(Number.parseInt(request.query.page,  10) || 1, 1);
-    const limit = Math.min(Math.max(Number.parseInt(request.query.limit, 10) || 12, 1), 50);
-    const filters = buildFilters(request.query, {
+    const page  = Math.max(parseInt(request.query.page,  10) || 1,  1);
+    const limit = Math.min(Math.max(parseInt(request.query.limit, 10) || 12, 1), 50);
+    const sort  = SORT_PRESETS[request.query.sort] || SORT_PRESETS.bestMatch;
+
+    const filters = await buildFilters(request.query, {
       compensationType: request.forcedCompensationType,
       location:         request.forcedLocation,
     });
-    const sort = sortOptions[request.query.sort] || sortOptions.bestMatch;
 
     const [items, total] = await Promise.all([
       Internship.find(filters)
-        .populate('companyId',      'name logo rating reviewCount verified')
+        .populate('companyId',      'name logo rating reviewCount verified location industry')
         .populate('requiredSkills', 'name')
         .sort(sort)
         .skip((page - 1) * limit)
-        .limit(limit),
+        .limit(limit)
+        .lean(),
       Internship.countDocuments(filters),
     ]);
 
+    // Attach display helpers
+    const enriched = items.map(i => ({
+      ...i,
+      company: i.companyId, // alias for frontend convenience
+    }));
+
     response.json({
-      items,
+      items: enriched,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
-      sort: request.query.sort || 'bestMatch',
+      sort:        request.query.sort || 'bestMatch',
+      filters: {
+        compensationType: request.query.compensationType || 'All',
+        certificateType:  request.query.certificateType  || 'All',
+        location:         request.query.location          || '',
+        course:           request.query.course            || '',
+        keyword:          request.query.keyword           || '',
+        startDate:        request.query.startDate         || '',
+      },
     });
   } catch (error) { next(error); }
 }
 
-// GET /api/internships/:id
+// ─── GET /api/internships/:id ─────────────────────────────────────────────────
 export async function getInternship(request, response, next) {
   try {
     const internship = await Internship.findById(request.params.id)
-      .populate('companyId',      'name logo description website location rating reviewCount verified')
-      .populate('requiredSkills', 'name');
+      .populate('companyId',      'name logo description website location rating reviewCount verified industry size founded')
+      .populate('requiredSkills', 'name')
+      .lean();
     if (!internship) return response.status(404).json({ message: 'Internship not found.' });
-    response.json(internship);
+    response.json({ ...internship, company: internship.companyId });
   } catch (error) { next(error); }
 }
 
-// GET /api/internships/locations
-// Returns: [{ location, total, paid, unpaid }] sorted by total desc
+// ─── GET /api/internships/locations ──────────────────────────────────────────
 export async function listLocations(request, response, next) {
   try {
     const stats = await Internship.aggregate([
       { $match: { status: 'Open' } },
       {
         $group: {
-          _id:    '$location',
-          total:  { $sum: 1 },
-          paid:   { $sum: { $cond: [{ $eq: ['$compensationType', 'Paid'] },   1, 0] } },
-          unpaid: { $sum: { $cond: [{ $eq: ['$compensationType', 'Unpaid'] }, 1, 0] } },
+          _id:               '$location',
+          total:             { $sum: 1 },
+          paid:              { $sum: { $cond: [{ $eq: ['$compensationType', 'Paid'] },   1, 0] } },
+          unpaid:            { $sum: { $cond: [{ $eq: ['$compensationType', 'Unpaid'] }, 1, 0] } },
+          stipendNotDiscl:   { $sum: { $cond: [{ $eq: ['$compensationType', 'Stipend Not Disclosed'] }, 1, 0] } },
+          avgStipend:        { $avg: { $cond: [{ $eq: ['$compensationType', 'Paid'] }, '$stipend', null] } },
         },
       },
       { $sort: { total: -1 } },
-      { $project: { _id: 0, location: '$_id', total: 1, paid: 1, unpaid: 1 } },
+      {
+        $project: {
+          _id: 0,
+          location:        '$_id',
+          total:           1,
+          paid:            1,
+          unpaid:          1,
+          stipendNotDiscl: 1,
+          avgStipend:      { $round: ['$avgStipend', 0] },
+        },
+      },
     ]);
     response.json(stats);
   } catch (error) { next(error); }
 }
 
-// Shorthand helpers for dedicated routes
+// ─── GET /api/internships/stats ───────────────────────────────────────────────
+export async function getStats(request, response, next) {
+  try {
+    const [
+      total, paid, unpaid, remote,
+      avgStipend, topLocations, topCourses,
+    ] = await Promise.all([
+      Internship.countDocuments({ status: 'Open' }),
+      Internship.countDocuments({ status: 'Open', compensationType: 'Paid' }),
+      Internship.countDocuments({ status: 'Open', compensationType: 'Unpaid' }),
+      Internship.countDocuments({ status: 'Open', location: /^remote$/i }),
+      Internship.aggregate([
+        { $match: { status: 'Open', compensationType: 'Paid', stipend: { $gt: 0 } } },
+        { $group: { _id: null, avg: { $avg: '$stipend' } } },
+      ]),
+      Internship.aggregate([
+        { $match: { status: 'Open' } },
+        { $group: { _id: '$location', count: { $sum: 1 } } },
+        { $sort: { count: -1 } }, { $limit: 5 },
+        { $project: { _id: 0, location: '$_id', count: 1 } },
+      ]),
+      Internship.aggregate([
+        { $match: { status: 'Open' } },
+        { $group: { _id: '$course', count: { $sum: 1 } } },
+        { $sort: { count: -1 } }, { $limit: 8 },
+        { $project: { _id: 0, course: '$_id', count: 1 } },
+      ]),
+    ]);
+
+    response.json({
+      total, paid, unpaid, remote,
+      avgStipend: Math.round(avgStipend[0]?.avg || 0),
+      topLocations,
+      topCourses,
+    });
+  } catch (error) { next(error); }
+}
+
+// ─── Shorthand helpers ────────────────────────────────────────────────────────
 export const listPaidInternships = (req, res, next) => {
   req.forcedCompensationType = 'Paid';
   return listInternships(req, res, next);
