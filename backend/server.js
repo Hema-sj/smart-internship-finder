@@ -23,6 +23,7 @@ const app = express();
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 const allowedOrigins = [
   process.env.CLIENT_URL || 'http://localhost:5173',
+  'http://localhost:5000',   // same-origin production
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:5175',
@@ -30,6 +31,7 @@ const allowedOrigins = [
 ];
 app.use(cors({
   origin: (origin, callback) => {
+    // Allow requests with no origin (curl, Postman, server-to-server)
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
     callback(new Error(`CORS blocked: ${origin}`));
   },
