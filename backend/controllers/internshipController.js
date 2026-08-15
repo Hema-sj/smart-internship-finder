@@ -1,4 +1,7 @@
 import Internship from '../models/Internship.js';
+import '../models/Company.js'; // register Company schema for populate()
+import '../models/Skill.js';   // register Skill schema for populate()
+
 
 const sortOptions = {
   bestMatch:      { aiMatch: -1, createdAt: -1 },

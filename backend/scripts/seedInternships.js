@@ -92,14 +92,15 @@ async function seed() {
 
   const internships = TEMPLATES.map((t, i) => ({
     ...t,
-    companyId:           companies[i]._id,
-    companyWebsite:      companies[i].website,
-    startDate:           futureDate(10 + i * 4),
-    applicationDeadline: futureDate(5  + i * 3),
-    requiredSkills:      [],
+    companyId:            companies[i]._id,
+    companyWebsite:       companies[i].website,
+    location:             companies[i].location,          // ← pulled from company
+    startDate:            futureDate(10 + i * 4),
+    applicationDeadline:  futureDate(5  + i * 3),
+    requiredSkills:       [],
     internshipDetailsUrl: '#',
     applicationUrl:       '#',
-    status:              'Open',
+    status:               'Open',
   }));
 
   await Internship.insertMany(internships);
