@@ -12,7 +12,8 @@ import RoleProtectedRoute      from './components/RoleProtectedRoute';
 // Public pages
 import HomePage                from './pages/HomePage';
 import InternshipListPage      from './pages/InternshipListPage';
-import LocationsPage           from './pages/LocationsPage';
+import InternshipDetailPage    from './pages/InternshipDetailPage';
+import Locations               from './pages/Locations';
 import LoginPage               from './pages/LoginPage';
 import RegisterPage            from './pages/RegisterPage';
 import CompanyLoginPage        from './pages/CompanyLoginPage';
@@ -52,7 +53,8 @@ export default function App() {
         <Route element={<AppLayout />}>
           <Route path="/"               element={<HomePage />} />
           <Route path="/internships"    element={<InternshipListPage />} />
-          <Route path="/locations"      element={<LocationsPage />} />
+          <Route path="/internships/:id" element={<InternshipDetailPage />} />
+          <Route path="/locations"      element={<Locations />} />
           <Route path="/login"          element={<LoginPage />} />
           <Route path="/register"       element={<RegisterPage />} />
           <Route path="/company/login"  element={<CompanyLoginPage />} />

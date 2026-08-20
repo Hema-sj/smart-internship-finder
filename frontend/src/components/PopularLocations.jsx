@@ -1,4 +1,35 @@
-import { MapPin } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { popularLocations } from '../data/internships';
-export default function PopularLocations() { return <section><h2 className="text-2xl font-bold">Popular Locations</h2><div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{popularLocations.map(location => <Link key={location} to={`/internships?location=${encodeURIComponent(location)}`} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 transition hover:border-emerald-400 hover:shadow-sm"><MapPin className="text-emerald-700" size={19}/><span className="font-semibold">{location}</span></Link>)}</div></section>; }
+import { useEffect, useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import LocationGrid from './LocationGrid';
+import { fetchLocationStats } from '../services/internshipService';
+
+export default function PopularLocations() {
+  const navigate = useNavigate();
+  const [stats, setStats] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchLocationStats()
+      .then((data) => setStats(Array.isArray(data) ? data : data.locations || []))
+      .catch(() => setStats([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <section>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <h2 className="text-2xl font-bold text-slate-900">Popular Locations</h2>
+        <Link to="/locations" className="text-sm font-semibold text-emerald-700 hover:underline">
+          View all locations
+        </Link>
+      </div>
+      <div className="mt-5">
+        <LocationGrid
+          stats={stats}
+          loading={loading}
+          onSelect={(location) => navigate(`/internships?location=${encodeURIComponent(location)}`)}
+        />
+      </div>
+    </section>
+  );
+}

@@ -1,18 +1,7 @@
 import api from './api';
 
-// ─── Internships ─────────────────────────────────────────────────────────────
-
-/**
- * Fetch paginated, filtered, sorted internships.
- * All filtering is done in MongoDB on the backend.
- *
- * Supported query params:
- *   page, limit, sort, keyword, location, course,
- *   compensationType, certificateType, startDate,
- *   minStipend, maxStipend, skills (comma-separated IDs)
- */
-export async function fetchInternships({
-  page = 1, limit = 12, sort = 'bestMatch',
+function buildParams({
+  page = 1, limit = 10, sort = 'bestMatch',
   compensationType, certificateType, location, course,
   startDate, keyword, minStipend, maxStipend, skills,
 } = {}) {
@@ -26,8 +15,16 @@ export async function fetchInternships({
   if (minStipend) params.minStipend = minStipend;
   if (maxStipend) params.maxStipend = maxStipend;
   if (skills)     params.skills     = skills;
-  const { data } = await api.get('/internships', { params });
-  return data; // { items, pagination, sort, filters }
+  return params;
+}
+
+/**
+ * Listing always uses GET /api/internships with MongoDB query filters,
+ * so location can be combined with course, compensation, start date, and keyword.
+ */
+export async function fetchInternships(options = {}) {
+  const { data } = await api.get('/internships', { params: buildParams(options) });
+  return data;
 }
 
 export async function fetchInternshipById(id) {
@@ -35,18 +32,51 @@ export async function fetchInternshipById(id) {
   return data;
 }
 
-export async function fetchInternshipsByLocation(location, params = {}) {
-  const { data } = await api.get(`/internships/location/${encodeURIComponent(location)}`, { params });
+export async function fetchInternshipsByLocation(location, options = {}) {
+  const { data } = await api.get(
+    `/locations/${encodeURIComponent(location)}/internships`,
+    { params: buildParams(options) },
+  );
   return data;
 }
 
-// ─── Location Stats ───────────────────────────────────────────────────────────
+export async function fetchPaidInternships(options = {}) {
+  const { data } = await api.get('/internships/paid', { params: buildParams(options) });
+  return data;
+}
+
+export async function fetchUnpaidInternships(options = {}) {
+  const { data } = await api.get('/internships/unpaid', { params: buildParams(options) });
+  return data;
+}
+
+export async function searchInternships(keyword, options = {}) {
+  const { data } = await api.get('/internships/search', {
+    params: buildParams({ ...options, keyword }),
+  });
+  return data;
+}
+
+export async function fetchLocations() {
+  const { data } = await api.get('/locations');
+  return data;
+}
+
 export async function fetchLocationStats() {
-  const { data } = await api.get('/internships/locations');
+  try {
+    const data = await fetchLocations();
+    return data.locations || data;
+  } catch {
+    const { data } = await api.get('/internships/locations');
+    return data;
+  }
+}
+
+export async function fetchCourses() {
+  const { data } = await api.get('/internships/courses');
   return data;
 }
 
-// ─── Global Stats ─────────────────────────────────────────────────────────────
 export async function fetchInternshipStats() {
   const { data } = await api.get('/internships/stats');
   return data;

@@ -1,3 +1,5 @@
+import { CANONICAL_LOCATIONS } from './locations';
+
 export const internships = [
   { id: 1, title: 'Software Engineering Intern', company: 'Razorpay', location: 'Bangalore', type: 'Paid', stipend: '₹35,000/mo', skills: ['React', 'Node.js'], startDate: '2026-06-01', course: 'Software Engineering', certificateType: 'Soft Copy', aiMatch: 96 },
   { id: 2, title: 'Data Science Intern', company: 'Zoho', location: 'Chennai', type: 'Paid', stipend: '₹25,000/mo', skills: ['Python', 'SQL'], startDate: '2026-05-15', course: 'Data Science', certificateType: 'Both', aiMatch: 91 },
@@ -9,4 +11,4 @@ export const internships = [
   { id: 8, title: 'AI Research Intern', company: 'Sarvam AI', location: 'Remote', type: 'Unpaid', stipend: 'Certificate', skills: ['LLMs', 'Python'], startDate: '2026-07-15', course: 'AI Research', certificateType: 'No Certificate', aiMatch: 80 }
 ];
 
-export const popularLocations = ['Chennai', 'Bangalore', 'Coimbatore', 'Hyderabad', 'Pune', 'Mumbai', 'Delhi', 'Kochi', 'Remote'];
+export const popularLocations = CANONICAL_LOCATIONS;

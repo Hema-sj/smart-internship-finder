@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { fetchInternships, fetchLocationStats } from '../services/internshipService';
 import { getMyApplications, getSaved } from '../services/studentService';
+import LocationGrid from '../components/LocationGrid';
 import {
   Sparkles, Briefcase, Bookmark, MapPin, TrendingUp,
-  ArrowRight, Clock, Building2, DollarSign, Award, Zap,
+  ArrowRight, Building2, Award, Zap,
 } from 'lucide-react';
 
 function StatCard({ icon: Icon, label, value, color, sub }) {
@@ -64,22 +65,7 @@ function InternshipMiniCard({ internship }) {
   );
 }
 
-function LocationBadge({ location, total }) {
-  return (
-    <Link
-      to={`/internships?location=${location}`}
-      className="flex items-center justify-between rounded-xl bg-white border border-slate-100 px-4 py-3 hover:border-emerald-300 hover:shadow-sm transition group"
-    >
-      <div className="flex items-center gap-2">
-        <MapPin size={14} className="text-emerald-600" />
-        <span className="text-sm font-semibold text-slate-700 group-hover:text-emerald-700">{location}</span>
-      </div>
-      <span className="text-xs font-bold text-white bg-emerald-600 rounded-full px-2.5 py-0.5">{total}</span>
-    </Link>
-  );
-}
-
-function AiMatchBanner({ name }) {
+function AiMatchBanner() {
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 p-6 text-white">
       <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10" />
@@ -106,6 +92,7 @@ function AiMatchBanner({ name }) {
 
 export default function StudentDashboardPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const firstName = user?.name?.split(' ')[0] || 'there';
 
   const [internships, setInternships]   = useState([]);
@@ -122,7 +109,10 @@ export default function StudentDashboardPage() {
       getSaved(),
     ]).then(([intRes, locRes, appRes, savRes]) => {
       if (intRes.status === 'fulfilled') setInternships(intRes.value.items || []);
-      if (locRes.status === 'fulfilled') setLocations(locRes.value.slice(0, 6));
+      if (locRes.status === 'fulfilled') {
+        const payload = locRes.value;
+        setLocations(Array.isArray(payload) ? payload : payload.locations || []);
+      }
       if (appRes.status === 'fulfilled') setApplications(appRes.value);
       if (savRes.status === 'fulfilled') setSaved(savRes.value);
     }).finally(() => setLoading(false));
@@ -150,21 +140,23 @@ export default function StudentDashboardPage() {
         <StatCard icon={Award}      label="Profile Score"   value="72%"   sub="Add skills to improve"    color="bg-gradient-to-br from-orange-400 to-orange-600" />
       </div>
 
-      {/* AI Banner + Locations */}
-      <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <AiMatchBanner name={firstName} />
-        </div>
-        <div className="space-y-2">
-          <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-3">📍 Top Locations</h2>
-          {loading
-            ? Array(5).fill(0).map((_, i) => <div key={i} className="h-12 rounded-xl bg-slate-100 animate-pulse" />)
-            : locations.map(l => <LocationBadge key={l.location} location={l.location} total={l.total} />)
-          }
-          <Link to="/internships" className="flex items-center gap-1 text-xs text-emerald-600 font-semibold hover:underline pt-1">
-            View all locations <ArrowRight size={12} />
+      <AiMatchBanner />
+
+      <div>
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Browse by location</h2>
+            <p className="text-sm text-slate-500">Select a city to see internships available only there.</p>
+          </div>
+          <Link to="/locations" className="flex items-center gap-1 text-sm font-semibold text-emerald-600 hover:underline">
+            View all locations <ArrowRight size={14} />
           </Link>
         </div>
+        <LocationGrid
+          stats={locations}
+          loading={loading}
+          onSelect={(location) => navigate(`/internships?location=${encodeURIComponent(location)}`)}
+        />
       </div>
 
       {/* Recent Internships */}

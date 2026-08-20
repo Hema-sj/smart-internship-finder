@@ -10,6 +10,8 @@ import mongoose  from 'mongoose';
 import Internship from '../models/Internship.js';
 import Company    from '../models/Company.js';     // must be imported to register schema
 import '../models/Skill.js';                        // must be imported to register schema
+import { escapeRegex, locationRegex } from '../constants/locations.js';
+import { aggregateLocationStats } from '../services/locationStats.js';
 
 // ─── Sort presets ─────────────────────────────────────────────────────────────
 const SORT_PRESETS = {
@@ -24,8 +26,10 @@ async function buildFilters(query, overrides = {}) {
   const filters = { status: 'Open' };
 
   // Allow caller to force a value (used by shorthand helpers)
-  const compensationType = overrides.compensationType ?? query.compensationType;
+  const compensationType = overrides.compensationType ?? query.compensationType ?? query.comp;
   const location         = overrides.location         ?? query.location;
+  const keyword          = query.keyword || query.q || query.search;
+  const course           = query.course;
 
   // ── Compensation ──
   if (compensationType && compensationType !== 'All') {
@@ -37,14 +41,14 @@ async function buildFilters(query, overrides = {}) {
     filters.certificateType = query.certificateType;
   }
 
-  // ── Location (exact, case-insensitive) ──
+  // ── Location (exact, case-insensitive) — MongoDB only ──
   if (location) {
-    filters.location = new RegExp(`^${location.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+    filters.location = locationRegex(location);
   }
 
   // ── Course (partial match) ──
-  if (query.course) {
-    filters.course = new RegExp(query.course.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+  if (course) {
+    filters.course = new RegExp(escapeRegex(course), 'i');
   }
 
   // ── Starting date (on or after) ──
@@ -67,8 +71,8 @@ async function buildFilters(query, overrides = {}) {
   }
 
   // ── Keyword search (title, course, description + company name) ──
-  if (query.keyword) {
-    const kw = query.keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (keyword) {
+    const kw = escapeRegex(keyword);
     const kwRe = new RegExp(kw, 'i');
 
     // Find companies matching the keyword
@@ -123,11 +127,11 @@ export async function listInternships(request, response, next) {
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
       sort:        request.query.sort || 'bestMatch',
       filters: {
-        compensationType: request.query.compensationType || 'All',
+        compensationType: request.forcedCompensationType || request.query.compensationType || request.query.comp || 'All',
         certificateType:  request.query.certificateType  || 'All',
-        location:         request.query.location          || '',
+        location:         request.forcedLocation || request.query.location || '',
         course:           request.query.course            || '',
-        keyword:          request.query.keyword           || '',
+        keyword:          request.query.keyword || request.query.q || request.query.search || '',
         startDate:        request.query.startDate         || '',
       },
     });
@@ -137,6 +141,9 @@ export async function listInternships(request, response, next) {
 // ─── GET /api/internships/:id ─────────────────────────────────────────────────
 export async function getInternship(request, response, next) {
   try {
+    if (!mongoose.isValidObjectId(request.params.id)) {
+      return response.status(404).json({ message: 'Internship not found.' });
+    }
     const internship = await Internship.findById(request.params.id)
       .populate('companyId',      'name logo description website location rating reviewCount verified industry size founded')
       .populate('requiredSkills', 'name')
@@ -149,32 +156,8 @@ export async function getInternship(request, response, next) {
 // ─── GET /api/internships/locations ──────────────────────────────────────────
 export async function listLocations(request, response, next) {
   try {
-    const stats = await Internship.aggregate([
-      { $match: { status: 'Open' } },
-      {
-        $group: {
-          _id:               '$location',
-          total:             { $sum: 1 },
-          paid:              { $sum: { $cond: [{ $eq: ['$compensationType', 'Paid'] },   1, 0] } },
-          unpaid:            { $sum: { $cond: [{ $eq: ['$compensationType', 'Unpaid'] }, 1, 0] } },
-          stipendNotDiscl:   { $sum: { $cond: [{ $eq: ['$compensationType', 'Stipend Not Disclosed'] }, 1, 0] } },
-          avgStipend:        { $avg: { $cond: [{ $eq: ['$compensationType', 'Paid'] }, '$stipend', null] } },
-        },
-      },
-      { $sort: { total: -1 } },
-      {
-        $project: {
-          _id: 0,
-          location:        '$_id',
-          total:           1,
-          paid:            1,
-          unpaid:          1,
-          stipendNotDiscl: 1,
-          avgStipend:      { $round: ['$avgStipend', 0] },
-        },
-      },
-    ]);
-    response.json(stats);
+    const locations = await aggregateLocationStats();
+    response.json(locations);
   } catch (error) { next(error); }
 }
 
@@ -229,3 +212,11 @@ export const listInternshipsByLocation = (req, res, next) => {
   req.forcedLocation = req.params.location;
   return listInternships(req, res, next);
 };
+
+// ─── GET /api/internships/courses ────────────────────────────────────────────
+export async function listCourses(request, response, next) {
+  try {
+    const courses = await Internship.distinct('course', { status: 'Open' });
+    response.json(courses.filter(Boolean).sort((a, b) => a.localeCompare(b)));
+  } catch (error) { next(error); }
+}

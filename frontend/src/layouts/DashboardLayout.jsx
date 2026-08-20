@@ -2,14 +2,15 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, Search, Bookmark, FileText, Bell,
-  UserCircle, BookOpen, Briefcase, Wand2, LogOut,
-  GraduationCap, ChevronRight, Menu, X,
+  UserCircle, BookOpen, Briefcase, LogOut,
+  GraduationCap, Menu, X, MapPin,
 } from 'lucide-react';
 import { useState } from 'react';
 
 const NAV = [
   { to: '/dashboard',       icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/internships',     icon: Search,           label: 'Internships' },
+  { to: '/locations',       icon: MapPin,           label: 'Locations' },
   { to: '/applications',    icon: Briefcase,        label: 'Applications' },
   { to: '/saved',           icon: Bookmark,         label: 'Saved' },
   { to: '/profile',         icon: UserCircle,       label: 'Profile' },
