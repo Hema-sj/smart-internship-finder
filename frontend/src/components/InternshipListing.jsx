@@ -83,6 +83,12 @@ export default function InternshipListing({ compact = false, pageSize = 10, titl
   const [inputVal, setInputVal] = useState(syncUrl ? (searchParams.get('q') || '') : '');
   const [sort, setSort] = useState(syncUrl ? (searchParams.get('sort') || 'bestMatch') : 'bestMatch');
   const [page, setPage] = useState(syncUrl ? (Number(searchParams.get('page')) || 1) : 1);
+  
+  // New filter states
+  const [compensationRange, setCompensationRange] = useState(syncUrl ? (searchParams.get('compRange') || '') : '');
+  const [certificate, setCertificate] = useState(syncUrl ? (searchParams.get('cert') || '') : '');
+  const [mode, setMode] = useState(syncUrl ? (searchParams.get('mode') || '') : '');
+  const [duration, setDuration] = useState(syncUrl ? (searchParams.get('duration') || '') : '');
 
   const [items, setItems] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0, limit: pageSize });
@@ -110,9 +116,13 @@ export default function InternshipListing({ compact = false, pageSize = 10, titl
     if (startDate) next.date = startDate;
     if (sort !== 'bestMatch') next.sort = sort;
     if (compensationType !== 'All') next.comp = compensationType;
+    if (compensationRange) next.compRange = compensationRange;
+    if (certificate) next.cert = certificate;
+    if (mode) next.mode = mode;
+    if (duration) next.duration = duration;
     if (page > 1) next.page = String(page);
     setSearchParams(next, { replace: true });
-  }, [keyword, location, course, startDate, sort, compensationType, page, setSearchParams, syncUrl]);
+  }, [keyword, location, course, startDate, sort, compensationType, compensationRange, certificate, mode, duration, page, setSearchParams, syncUrl]);
 
   useEffect(() => {
     fetchInternshipStats()
@@ -128,7 +138,7 @@ export default function InternshipListing({ compact = false, pageSize = 10, titl
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchInternships({
+      const response = await fetchInternships({
         page,
         limit: pageSize,
         sort,
@@ -137,16 +147,26 @@ export default function InternshipListing({ compact = false, pageSize = 10, titl
         course,
         startDate,
         keyword,
+        compensationRange,
+        certificate,
+        mode,
+        duration,
       });
-      setItems(data.items || []);
-      setPagination(data.pagination || { page, pages: 1, total: 0, limit: pageSize });
+      // Backend returns: { data: [], totalCount, totalPages, currentPage }
+      setItems(response.data || []);
+      setPagination({ 
+        page: response.currentPage || page, 
+        pages: response.totalPages || 1, 
+        total: response.totalCount || 0, 
+        limit: pageSize 
+      });
     } catch {
       setItems([]);
       setPagination({ page: 1, pages: 1, total: 0, limit: pageSize });
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, sort, compensationType, location, course, startDate, keyword]);
+  }, [page, pageSize, sort, compensationType, location, course, startDate, keyword, compensationRange, certificate, mode, duration]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -207,6 +227,7 @@ export default function InternshipListing({ compact = false, pageSize = 10, titl
         value={location}
         onChange={resetPage(setLocation)}
         locations={CANONICAL_LOCATIONS}
+        enableNavigation={true}
       />
 
       <InternshipSearch
@@ -220,7 +241,18 @@ export default function InternshipListing({ compact = false, pageSize = 10, titl
         onStartDateChange={resetPage(setStartDate)}
         sort={sort}
         onSortChange={resetPage(setSort)}
+        location={location}
+        onLocationChange={resetPage(setLocation)}
+        compensationRange={compensationRange}
+        onCompensationRangeChange={resetPage(setCompensationRange)}
+        certificate={certificate}
+        onCertificateChange={resetPage(setCertificate)}
+        mode={mode}
+        onModeChange={resetPage(setMode)}
+        duration={duration}
+        onDurationChange={resetPage(setDuration)}
         onSubmit={load}
+        onClearFilters={() => load()}
       />
 
       <InternshipTable

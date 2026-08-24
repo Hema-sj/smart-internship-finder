@@ -14,6 +14,8 @@ import HomePage                from './pages/HomePage';
 import InternshipListPage      from './pages/InternshipListPage';
 import InternshipDetailPage    from './pages/InternshipDetailPage';
 import Locations               from './pages/Locations';
+import LocationPage            from './pages/LocationPage';
+import CompanyProfilePage      from './pages/CompanyProfilePage';
 import LoginPage               from './pages/LoginPage';
 import RegisterPage            from './pages/RegisterPage';
 import CompanyLoginPage        from './pages/CompanyLoginPage';
@@ -59,6 +61,8 @@ export default function App() {
           <Route path="/internships"    element={<InternshipListPage />} />
           <Route path="/internships/:id" element={<InternshipDetailPage />} />
           <Route path="/locations"      element={<Locations />} />
+          <Route path="/locations/:location" element={<LocationPage />} />
+          <Route path="/company/:id"    element={<CompanyProfilePage />} />
           <Route path="/login"          element={<LoginPage />} />
           <Route path="/register"       element={<RegisterPage />} />
           <Route path="/company/login"  element={<CompanyLoginPage />} />

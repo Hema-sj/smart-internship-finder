@@ -1,4 +1,5 @@
 import { MapPin } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { CANONICAL_LOCATIONS } from '../data/locations';
 
 export default function LocationFilter({
@@ -6,8 +7,20 @@ export default function LocationFilter({
   onChange,
   locations = CANONICAL_LOCATIONS,
   allowAll = true,
+  enableNavigation = false, // New prop to enable navigation to location pages
 }) {
+  const navigate = useNavigate();
   const options = allowAll ? ['All', ...locations] : locations;
+
+  const handleLocationClick = (location) => {
+    if (enableNavigation && location !== 'All') {
+      // Navigate to location page
+      navigate(`/locations/${location.toLowerCase()}`);
+    } else {
+      // Filter current page
+      onChange?.(location === 'All' ? '' : location);
+    }
+  };
 
   return (
     <div>
@@ -21,12 +34,13 @@ export default function LocationFilter({
             <button
               key={location}
               type="button"
-              onClick={() => onChange?.(location === 'All' ? '' : location)}
+              onClick={() => handleLocationClick(location)}
               className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition ${
                 selected
                   ? 'border-emerald-700 bg-emerald-700 text-white'
                   : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-300 hover:text-emerald-700'
               }`}
+              title={enableNavigation && location !== 'All' ? `View all internships in ${location}` : undefined}
             >
               {location === 'All' ? 'All locations' : location}
             </button>
