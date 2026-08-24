@@ -4,58 +4,53 @@ import { CERTIFICATE_TYPES } from '../constants/certificates.js';
 const internshipSchema = new mongoose.Schema({
   companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true, index: true },
   title: { type: String, required: true, trim: true },
-  course: { type: String, required: true, trim: true, index: true },
-  startDate: { type: Date, required: true },
+  courseRole: { type: String, required: true, trim: true, index: true },
+  startingDate: { type: Date, required: true, index: true },
   applicationDeadline: { type: Date, required: true },
   duration: { type: String, required: true, trim: true },
   location: { type: String, required: true, trim: true, index: true },
-  mode: { type: String, enum: ['onsite', 'remote', 'hybrid'], default: 'onsite' },
-  compensationType: { type: String, enum: ['Paid', 'Unpaid', 'Stipend Not Disclosed'], required: true, index: true },
+  mode: { type: String, enum: ['Remote', 'On-site', 'Hybrid'], required: true },
+  compensationType: { 
+    type: String, 
+    enum: ['Paid', 'Unpaid', 'Stipend Not Disclosed'], 
+    required: true, 
+    index: true 
+  },
   stipend: { type: Number, min: 0, default: 0 },
-  // ── Phase 8: Certificate Information System ──
-  certificateProvided: { type: Boolean, default: false },
   certificateType: {
     type: String,
-    enum: CERTIFICATE_TYPES,
-    default: 'Not Disclosed',
+    enum: ['Hard Copy', 'Soft Copy', 'Both', 'No Certificate', 'Not Disclosed'],
+    required: true,
     index: true,
   },
-  certificateDetails: { type: String, trim: true, default: '' },
-  certificateConditions: { type: String, trim: true, default: '' },
-  requiredSkills: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Skill' }],
+  requiredSkills: [{ type: String, trim: true }],
   description: { type: String, required: true, trim: true },
   companyWebsite: { type: String, trim: true },
   internshipDetailsUrl: { type: String, required: true, trim: true },
   applicationUrl: { type: String, required: true, trim: true },
-  rating: { type: Number, min: 0, max: 5, default: 0 },
-  reviewCount: { type: Number, min: 0, default: 0 },
+  status: { 
+    type: String, 
+    enum: ['Pending', 'Approved', 'Rejected', 'Disabled'], 
+    default: 'Pending', 
+    index: true 
+  },
   aiMatch: { type: Number, min: 0, max: 100, default: 0 },
-  status: { type: String, enum: ['Draft', 'Open', 'Closed'], default: 'Draft', index: true }
 }, { timestamps: true });
 
-// ── Phase 8: keep certificate fields consistent ─────────────────────────────
-// 1. certificateProvided false → certificateType must be 'Not Provided'
-// 2. certificateProvided true  → type must be Hard Copy | Soft Copy | Both
-//                                 ('Not Disclosed' allowed when info unavailable)
-internshipSchema.pre('validate', function enforceCertificateConsistency(next) {
-  const realTypes = ['Hard Copy', 'Soft Copy', 'Both'];
-  if (this.certificateProvided === false) {
-    if (this.certificateType !== 'Not Disclosed') {
-      this.certificateType = 'Not Provided';
-    }
-  } else if (this.certificateProvided === true) {
-    if (!realTypes.includes(this.certificateType) && this.certificateType !== 'Not Disclosed') {
-      this.certificateType = 'Not Disclosed';
-    }
-  } else {
-    // Flag not set — derive it from the type so legacy documents keep working
-    this.certificateProvided = realTypes.includes(this.certificateType);
+// Validation: stipend required only when compensationType is "Paid"
+internshipSchema.pre('validate', function(next) {
+  if (this.compensationType === 'Paid' && (this.stipend === undefined || this.stipend === null)) {
+    return next(new Error('Stipend is required when compensationType is "Paid"'));
   }
   next();
 });
 
-internshipSchema.index({ title: 'text', description: 'text', course: 'text' });
-internshipSchema.index({ startDate: 1 });
-internshipSchema.index({ requiredSkills: 1 });
-internshipSchema.index({ aiMatch: -1, createdAt: -1 });
+// Text search index
+internshipSchema.index({ title: 'text', description: 'text', courseRole: 'text' });
+
+// Compound indexes for common queries
+internshipSchema.index({ status: 1, startingDate: 1 });
+internshipSchema.index({ status: 1, aiMatch: -1, createdAt: -1 });
+internshipSchema.index({ companyId: 1, status: 1 });
+
 export default mongoose.model('Internship', internshipSchema);

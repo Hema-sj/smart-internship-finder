@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
 import { fileURLToPath } from 'url';
 import { join, dirname } from 'path';
 
@@ -23,7 +24,7 @@ const app = express();
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 const allowedOrigins = [
-  process.env.CLIENT_URL || 'http://localhost:5173',
+  process.env.CORS_ORIGIN || process.env.CLIENT_URL || 'http://localhost:5173',
   'http://localhost:5000',   // same-origin production
   'http://localhost:5173',
   'http://localhost:5174',
@@ -39,6 +40,15 @@ app.use(cors({
   credentials: true,
 }));
 
+// ─── Rate Limiting ────────────────────────────────────────────────────────────
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 requests per window
+  message: 'Too many login/register attempts, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // ─── Body parsing ─────────────────────────────────────────────────────────────
 app.use(express.json());
 app.use(cookieParser());
@@ -47,11 +57,16 @@ app.use('/uploads', express.static('uploads'));
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.use('/api/health',       healthRouter);
+// Apply rate limiting to auth routes
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/company/login', authLimiter);
+app.use('/api/auth/company/register', authLimiter);
 app.use('/api/auth',         authRouter);
 app.use('/api/internships',  internshipRouter);
 app.use('/api/locations',    locationRouter);
 app.use('/api/students',     studentRouter);
-app.use('/api/companies/me', companyRouter);
+app.use('/api/company',      companyRouter);
 app.use('/api/admin',        adminRouter);
 app.use('/api/reviews',      reviewRouter);
 app.use('/api/resources',    resourceRouter);
@@ -61,8 +76,13 @@ app.use(express.static(FRONTEND_DIST));
 
 // ─── Global error handler ─────────────────────────────────────────────────────
 app.use((error, _request, response, _next) => {
-  console.error('[ERROR]', error.message, error.stack?.split('\n')[1]?.trim());
-  response.status(error.status || 500).json({ message: error.message || 'Something went wrong.' });
+  // Never leak stack traces in production
+  const isDev = process.env.NODE_ENV !== 'production';
+  console.error('[ERROR]', error.message, error.stack);
+  response.status(error.status || 500).json({ 
+    message: error.message || 'Something went wrong.',
+    ...(isDev && { stack: error.stack })
+  });
 });
 
 // ─── SPA fallback — serve index.html for all non-API routes ──────────────────
@@ -75,6 +95,7 @@ const port = process.env.PORT || 5000;
 connectDatabase().finally(() =>
   app.listen(port, () => {
     console.log(`\n🚀 Smart Internship Finder`);
+    console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`   App:     http://localhost:${port}`);
     console.log(`   API:     http://localhost:${port}/api`);
     console.log(`   Health:  http://localhost:${port}/api/health\n`);

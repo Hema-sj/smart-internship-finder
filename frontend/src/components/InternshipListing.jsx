@@ -9,7 +9,6 @@ import CompensationStatsCards from './CompensationStatsCards';
 import {
   fetchInternships,
   fetchInternshipById,
-  fetchCourses,
   fetchInternshipStats,
 } from '../services/internshipService';
 import { CANONICAL_LOCATIONS } from '../data/locations';
@@ -89,7 +88,6 @@ export default function InternshipListing({ compact = false, pageSize = 10, titl
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0, limit: pageSize });
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
-  const [courses, setCourses] = useState([]);
   const [stats, setStats] = useState({ total: 0, paid: 0, unpaid: 0 });
   const [statsLoading, setStatsLoading] = useState(true);
   const debounceRef = useRef(null);
@@ -117,9 +115,6 @@ export default function InternshipListing({ compact = false, pageSize = 10, titl
   }, [keyword, location, course, startDate, sort, compensationType, page, setSearchParams, syncUrl]);
 
   useEffect(() => {
-    fetchCourses()
-      .then((list) => { if (Array.isArray(list) && list.length) setCourses(list); })
-      .catch(() => {});
     fetchInternshipStats()
       .then((data) => setStats({
         total: data.total ?? 0,
@@ -221,7 +216,6 @@ export default function InternshipListing({ compact = false, pageSize = 10, titl
         onCompensationChange={resetPage(setCompensationType)}
         course={course}
         onCourseChange={resetPage(setCourse)}
-        courses={courses}
         startDate={startDate}
         onStartDateChange={resetPage(setStartDate)}
         sort={sort}

@@ -37,21 +37,29 @@ export async function register(request, response, next) {
 // ─── Company registration ──────────────────────────────────────────────────────
 export async function registerCompany(request, response, next) {
   try {
-    const { name, email, password, companyName, website, location, description } = request.body;
-    if (!name || !email || !password || !companyName)
-      return response.status(400).json({ message: 'name, email, password, and companyName are required.' });
+    const { name, email, password, companyName, website, industry, logo } = request.body;
+    if (!name || !email || !password || !companyName || !industry)
+      return response.status(400).json({ message: 'name, email, password, companyName, and industry are required.' });
     if (await User.exists({ email: email.toLowerCase() }))
       return response.status(409).json({ message: 'An account with this email already exists.' });
 
     const user    = await User.create({ name, email, password, role: 'company' });
     const company = await Company.create({
-      userId:      user._id,
-      name:        companyName,
-      website:     website     || '',
-      location:    location    || '',
-      description: description || '',
+      userId:          user._id,
+      companyName:     companyName,
+      website:         website     || '',
+      industry:        industry,
+      logo:            logo        || '',
+      description:     '',
+      verified_status: 'pending', // Requires admin approval
     });
-    sendAuth(response, user, { company });
+    
+    // Do NOT send auth token - company must wait for admin verification
+    response.status(201).json({
+      message: 'Company registration successful. Your account is pending admin verification.',
+      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+      company: { id: company._id, companyName: company.companyName, verified_status: company.verified_status }
+    });
   } catch (error) { next(error); }
 }
 
@@ -72,7 +80,16 @@ async function loginAs(request, response, next, role) {
     if (role === 'student') {
       extra.studentProfile = await StudentProfile.findOne({ userId: user._id }).populate('skills', 'name');
     } else if (role === 'company') {
-      extra.company = await Company.findOne({ userId: user._id });
+      const company = await Company.findOne({ userId: user._id });
+      
+      // Reject login if company not yet verified by admin
+      if (!company || company.verified_status !== 'approved') {
+        return response.status(403).json({ 
+          message: 'Your company account is pending admin verification. Please wait for approval.' 
+        });
+      }
+      
+      extra.company = company;
     }
 
     sendAuth(response, user, extra);

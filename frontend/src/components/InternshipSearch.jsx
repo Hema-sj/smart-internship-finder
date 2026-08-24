@@ -1,4 +1,5 @@
 import { Search, BookOpen, Calendar, ArrowUpDown } from 'lucide-react';
+import { INTERNSHIP_COURSES } from '../data/courses';
 
 const COMP_FILTERS = [
   { value: 'All', label: 'All' },
@@ -16,7 +17,7 @@ const SORT_OPTIONS = [
 export default function InternshipSearch({
   keyword, onKeywordChange,
   compensationType, onCompensationChange,
-  course, onCourseChange, courses = [],
+  course, onCourseChange,
   startDate, onStartDateChange,
   sort, onSortChange,
   onSubmit,
@@ -73,9 +74,9 @@ export default function InternshipSearch({
             className="w-full bg-transparent py-3 text-sm outline-none"
             aria-label="Course"
           >
-            <option value="">Course</option>
-            {courses.map((item) => (
-              <option key={item} value={item}>{item}</option>
+            <option value="">All Courses</option>
+            {INTERNSHIP_COURSES.map((courseName) => (
+              <option key={courseName} value={courseName}>{courseName}</option>
             ))}
           </select>
         </label>

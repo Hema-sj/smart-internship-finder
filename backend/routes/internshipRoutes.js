@@ -1,28 +1,10 @@
 import { Router } from 'express';
-import {
-  listInternships,
-  getInternship,
-  listPaidInternships,
-  listUnpaidInternships,
-  listInternshipsByLocation,
-  listLocations,
-  listCourses,
-  getStats,
-} from '../controllers/internshipController.js';
+import { getInternships, getInternshipById } from '../controllers/internshipController.js';
 
 const router = Router();
 
-// ── Specific named routes MUST come before /:id ──────────────────────────────
-router.get('/locations',          listLocations);
-router.get('/courses',            listCourses);
-router.get('/stats',              getStats);
-router.get('/paid',               listPaidInternships);
-router.get('/unpaid',             listUnpaidInternships);
-router.get('/search',             listInternships);
-router.get('/location/:location', listInternshipsByLocation);
-
-// ── Generic list & detail ─────────────────────────────────────────────────────
-router.get('/',    listInternships);
-router.get('/:id', getInternship);
+// Public routes - no authentication required (but match scores calculated if authenticated)
+router.get('/', getInternships);
+router.get('/:id', getInternshipById);
 
 export default router;
