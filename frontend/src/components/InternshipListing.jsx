@@ -5,10 +5,12 @@ import InternshipSearch from './InternshipSearch';
 import InternshipTable from './InternshipTable';
 import InternshipDetailModal from './InternshipDetailModal';
 import LocationFilter from './LocationFilter';
+import CompensationStatsCards from './CompensationStatsCards';
 import {
   fetchInternships,
   fetchInternshipById,
   fetchCourses,
+  fetchInternshipStats,
 } from '../services/internshipService';
 import { CANONICAL_LOCATIONS } from '../data/locations';
 
@@ -88,6 +90,8 @@ export default function InternshipListing({ compact = false, pageSize = 10, titl
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [courses, setCourses] = useState([]);
+  const [stats, setStats] = useState({ total: 0, paid: 0, unpaid: 0 });
+  const [statsLoading, setStatsLoading] = useState(true);
   const debounceRef = useRef(null);
 
   useEffect(() => {
@@ -116,6 +120,14 @@ export default function InternshipListing({ compact = false, pageSize = 10, titl
     fetchCourses()
       .then((list) => { if (Array.isArray(list) && list.length) setCourses(list); })
       .catch(() => {});
+    fetchInternshipStats()
+      .then((data) => setStats({
+        total: data.total ?? 0,
+        paid: data.paid ?? 0,
+        unpaid: data.unpaid ?? 0,
+      }))
+      .catch(() => {})
+      .finally(() => setStatsLoading(false));
   }, []);
 
   const load = useCallback(async () => {
@@ -185,6 +197,15 @@ export default function InternshipListing({ compact = false, pageSize = 10, titl
             </p>
           )}
         </div>
+      )}
+
+      {!compact && (
+        <CompensationStatsCards
+          total={stats.total}
+          paid={stats.paid}
+          unpaid={stats.unpaid}
+          loading={statsLoading}
+        />
       )}
 
       <LocationFilter

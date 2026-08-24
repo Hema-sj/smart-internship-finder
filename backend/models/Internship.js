@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { CERTIFICATE_TYPES } from '../constants/certificates.js';
 
 const internshipSchema = new mongoose.Schema({
   companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true, index: true },
@@ -11,7 +12,16 @@ const internshipSchema = new mongoose.Schema({
   mode: { type: String, enum: ['onsite', 'remote', 'hybrid'], default: 'onsite' },
   compensationType: { type: String, enum: ['Paid', 'Unpaid', 'Stipend Not Disclosed'], required: true, index: true },
   stipend: { type: Number, min: 0, default: 0 },
-  certificateType: { type: String, enum: ['Hard Copy', 'Soft Copy', 'Both', 'No Certificate', 'Not Disclosed'], default: 'Not Disclosed' },
+  // ── Phase 8: Certificate Information System ──
+  certificateProvided: { type: Boolean, default: false },
+  certificateType: {
+    type: String,
+    enum: CERTIFICATE_TYPES,
+    default: 'Not Disclosed',
+    index: true,
+  },
+  certificateDetails: { type: String, trim: true, default: '' },
+  certificateConditions: { type: String, trim: true, default: '' },
   requiredSkills: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Skill' }],
   description: { type: String, required: true, trim: true },
   companyWebsite: { type: String, trim: true },
@@ -22,6 +32,27 @@ const internshipSchema = new mongoose.Schema({
   aiMatch: { type: Number, min: 0, max: 100, default: 0 },
   status: { type: String, enum: ['Draft', 'Open', 'Closed'], default: 'Draft', index: true }
 }, { timestamps: true });
+
+// ── Phase 8: keep certificate fields consistent ─────────────────────────────
+// 1. certificateProvided false → certificateType must be 'Not Provided'
+// 2. certificateProvided true  → type must be Hard Copy | Soft Copy | Both
+//                                 ('Not Disclosed' allowed when info unavailable)
+internshipSchema.pre('validate', function enforceCertificateConsistency(next) {
+  const realTypes = ['Hard Copy', 'Soft Copy', 'Both'];
+  if (this.certificateProvided === false) {
+    if (this.certificateType !== 'Not Disclosed') {
+      this.certificateType = 'Not Provided';
+    }
+  } else if (this.certificateProvided === true) {
+    if (!realTypes.includes(this.certificateType) && this.certificateType !== 'Not Disclosed') {
+      this.certificateType = 'Not Disclosed';
+    }
+  } else {
+    // Flag not set — derive it from the type so legacy documents keep working
+    this.certificateProvided = realTypes.includes(this.certificateType);
+  }
+  next();
+});
 
 internshipSchema.index({ title: 'text', description: 'text', course: 'text' });
 internshipSchema.index({ startDate: 1 });

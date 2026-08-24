@@ -4,20 +4,8 @@ import {
   ExternalLink, Sparkles, Star, Globe, CheckCircle, BookOpen
 } from 'lucide-react';
 
-function Badge({ children, variant = 'default' }) {
-  const styles = {
-    default: 'bg-slate-100 text-slate-600',
-    paid: 'bg-emerald-100 text-emerald-700',
-    unpaid: 'bg-amber-100 text-amber-700',
-    open: 'bg-sky-100 text-sky-700',
-    verified: 'bg-violet-100 text-violet-700',
-  };
-  return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${styles[variant] || styles.default}`}>
-      {children}
-    </span>
-  );
-}
+import CompensationBadge from './CompensationBadge';
+import { getCompensationSummary } from '../utils/compensation';
 
 function InfoRow({ icon: Icon, label, value }) {
   if (!value) return null;
@@ -51,10 +39,10 @@ export default function InternshipDetailModal({ internship, onClose }) {
   if (!internship) return null;
 
   const company = internship.companyId || {};
-  const isPaid = internship.compensationType === 'Paid';
-  const stipendDisplay = isPaid
-    ? `₹${Number(internship.stipend).toLocaleString('en-IN')}/month`
-    : internship.compensationType;
+  const summary = getCompensationSummary(internship);
+  const stipendDisplay = summary.subtitle
+    ? `${summary.amount} ${summary.subtitle}`
+    : summary.amount;
 
   return (
     <div
@@ -94,8 +82,10 @@ export default function InternshipDetailModal({ internship, onClose }) {
                 )}
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
-                <Badge variant={isPaid ? 'paid' : 'unpaid'}>{internship.compensationType}</Badge>
-                <Badge variant="open">{internship.mode}</Badge>
+                <CompensationBadge compensationType={internship.compensationType} />
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-1 text-xs font-semibold capitalize">
+                  {internship.mode}
+                </span>
                 {internship.aiMatch > 0 && (
                   <span className="flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-1 text-xs font-bold">
                     <Sparkles size={11} /> {internship.aiMatch}% match

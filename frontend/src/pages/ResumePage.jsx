@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { getResumes, deleteResume } from '../services/studentService';
+import { getResumes, uploadResume, deleteResume } from '../services/studentService';
 import { FileText, Upload, Trash2, Loader2, Sparkles, Download, Eye } from 'lucide-react';
 
 function ResumeCard({ resume, onDelete }) {
@@ -69,17 +69,17 @@ export default function ResumePage() {
     if (file.size > 5 * 1024 * 1024) return alert('File must be under 5 MB.');
 
     setUploading(true);
-    // Simulated upload — real implementation would POST to /api/students/me/resumes with FormData
-    setTimeout(() => {
-      const fake = {
-        _id:             Date.now().toString(),
-        fileName:        file.name,
-        uploadedAt:      new Date().toISOString(),
-        extractedSkills: ['React', 'Node.js', 'Python', 'MongoDB'],
-      };
-      setResumes(prev => [fake, ...prev]);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const newResume = await uploadResume(formData);
+      setResumes(prev => [newResume, ...prev]);
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to upload resume. Please try again.');
+    } finally {
       setUploading(false);
-    }, 2000);
+    }
   };
 
   const onDrop = (e) => {

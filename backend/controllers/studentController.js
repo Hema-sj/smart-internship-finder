@@ -198,6 +198,58 @@ export async function getResumes(request, response, next) {
   } catch (error) { next(error); }
 }
 
+export async function uploadResume(request, response, next) {
+  try {
+    const profile = await getProfile(request.user._id);
+    if (!profile) return response.status(404).json({ message: 'Profile not found.' });
+
+    if (!request.file) return response.status(400).json({ message: 'No file uploaded.' });
+
+    const file = request.file;
+    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!allowedTypes.includes(file.mimetype)) {
+      return response.status(400).json({ message: 'Only PDF, DOC, and DOCX files are allowed.' });
+    }
+
+    // Call AI service to parse resume
+    let extractedData = { skills: [], education: [], experience: [], projects: [], certifications: [] };
+    try {
+      const FormData = (await import('form-data')).default;
+      const formData = new FormData();
+      formData.append('file', file.buffer, { filename: file.originalname });
+
+      const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+      const aiResponse = await fetch(`${aiServiceUrl}/api/resume/analyze`, {
+        method: 'POST',
+        body: formData,
+        headers: formData.getHeaders(),
+      });
+
+      if (aiResponse.ok) {
+        extractedData = await aiResponse.json();
+      }
+    } catch (aiError) {
+      console.warn('[AI Service] Resume parsing failed:', aiError.message);
+      // Continue without AI data — graceful fallback
+    }
+
+    const resume = await Resume.create({
+      studentId:       profile._id,
+      fileName:        file.originalname,
+      fileSize:        file.size,
+      filePath:        file.path,
+      extractedSkills: extractedData.skills || [],
+      extractedText:   extractedData.text || '',
+      education:       extractedData.education || [],
+      experience:      extractedData.experience || [],
+      projects:        extractedData.projects || [],
+      certifications:  extractedData.certifications || [],
+    });
+
+    response.status(201).json(resume);
+  } catch (error) { next(error); }
+}
+
 export async function deleteResume(request, response, next) {
   try {
     const profile = await getProfile(request.user._id);

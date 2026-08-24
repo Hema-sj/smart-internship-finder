@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getSaved, unsaveInternship, applyToInternship } from '../services/studentService';
-import { Bookmark, Building2, MapPin, Calendar, DollarSign, Trash2, Send, Loader2 } from 'lucide-react';
+import { Bookmark, Building2, MapPin, Calendar, Trash2, Send, Loader2 } from 'lucide-react';
+import CompensationBadge from '../components/CompensationBadge';
+import { getCompensationSummary } from '../utils/compensation';
 
 function SavedCard({ item, onUnsave, onApply }) {
   const internship = item.internshipId;
@@ -21,6 +23,7 @@ function SavedCard({ item, onUnsave, onApply }) {
   };
 
   if (!internship) return null;
+  const summary = getCompensationSummary(internship);
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 hover:shadow-md transition">
@@ -36,13 +39,8 @@ function SavedCard({ item, onUnsave, onApply }) {
           <p className="text-sm text-slate-500">{company?.name}</p>
           <div className="flex flex-wrap gap-3 mt-2">
             <span className="flex items-center gap-1 text-xs text-slate-400"><MapPin size={11} />{internship.location}</span>
-            <span className={`text-xs font-semibold rounded-full px-2.5 py-0.5 ${
-              internship.compensationType === 'Paid'
-                ? 'bg-emerald-50 text-emerald-700'
-                : 'bg-slate-100 text-slate-500'
-            }`}>
-              {internship.compensationType === 'Paid' ? `₹${internship.stipend?.toLocaleString()}/mo` : 'Unpaid'}
-            </span>
+            <span className="text-xs font-semibold text-slate-700">{summary.amount}</span>
+            <CompensationBadge compensationType={internship.compensationType} />
             <span className="flex items-center gap-1 text-xs text-slate-400">
               <Calendar size={11} />Deadline: {new Date(internship.applicationDeadline).toLocaleDateString('en-IN')}
             </span>

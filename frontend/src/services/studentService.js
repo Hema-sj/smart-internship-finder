@@ -21,6 +21,9 @@ export const markAllNotificationsRead = () => api.patch('/students/me/notificati
 
 // ─── Resumes ──────────────────────────────────────────────────────────────────
 export const getResumes    = ()   => api.get('/students/me/resumes').then(r => r.data);
+export const uploadResume  = (formData) => api.post('/students/me/resumes', formData, {
+  headers: { 'Content-Type': 'multipart/form-data' }
+}).then(r => r.data);
 export const deleteResume  = (id) => api.delete(`/students/me/resumes/${id}`).then(r => r.data);
 
 // ─── Reviews ──────────────────────────────────────────────────────────────────

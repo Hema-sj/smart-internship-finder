@@ -5,6 +5,7 @@
 import Company     from '../models/Company.js';
 import Internship  from '../models/Internship.js';
 import Application from '../models/Application.js';
+import { validateCertificateFields } from '../constants/certificates.js';
 import '../models/StudentProfile.js';
 import '../models/Skill.js';
 
@@ -65,7 +66,16 @@ export async function createInternship(request, response, next) {
     if (!company) return response.status(404).json({ message: 'Company profile not found. Complete your company profile first.' });
     if (!company.verified) return response.status(403).json({ message: 'Your company must be verified by an admin before posting internships.' });
 
-    const internship = await Internship.create({ ...request.body, companyId: company._id, status: 'Open' });
+    // ── Phase 8: certificate validation ──
+    const { error, data } = validateCertificateFields(request.body);
+    if (error) return response.status(400).json({ message: error });
+
+    const internship = await Internship.create({
+      ...request.body,
+      ...(data || {}),
+      companyId: company._id,
+      status: 'Open',
+    });
     response.status(201).json(internship);
   } catch (error) { next(error); }
 }
@@ -75,9 +85,13 @@ export async function updateInternship(request, response, next) {
     const company = await getCompany(request.user._id);
     if (!company) return response.status(404).json({ message: 'Company profile not found.' });
 
+    // ── Phase 8: certificate validation ──
+    const { error, data } = validateCertificateFields(request.body);
+    if (error) return response.status(400).json({ message: error });
+
     const internship = await Internship.findOneAndUpdate(
       { _id: request.params.id, companyId: company._id },
-      { $set: request.body },
+      { $set: { ...request.body, ...(data || {}) } },
       { new: true, runValidators: true }
     );
     if (!internship) return response.status(404).json({ message: 'Internship not found or not owned by your company.' });

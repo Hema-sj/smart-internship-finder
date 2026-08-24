@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { fetchInternships, fetchLocationStats } from '../services/internshipService';
 import { getMyApplications, getSaved } from '../services/studentService';
 import LocationGrid from '../components/LocationGrid';
+import CompensationBadge from '../components/CompensationBadge';
+import { getCompensationSummary } from '../utils/compensation';
 import {
   Sparkles, Briefcase, Bookmark, MapPin, TrendingUp,
   ArrowRight, Building2, Award, Zap,
@@ -26,6 +28,7 @@ function StatCard({ icon: Icon, label, value, color, sub }) {
 
 function InternshipMiniCard({ internship }) {
   const company = internship.companyId;
+  const summary = getCompensationSummary(internship);
   return (
     <Link
       to="/internships"
@@ -40,17 +43,12 @@ function InternshipMiniCard({ internship }) {
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-slate-900 truncate text-sm group-hover:text-emerald-700 transition">{internship.title}</p>
         <p className="text-xs text-slate-500 truncate">{company?.name}</p>
-        <div className="flex items-center gap-3 mt-1.5">
+        <div className="flex flex-wrap items-center gap-2 mt-1.5">
           <span className="flex items-center gap-1 text-xs text-slate-400">
             <MapPin size={10} /> {internship.location}
           </span>
-          <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-            internship.compensationType === 'Paid'
-              ? 'bg-emerald-50 text-emerald-700'
-              : 'bg-slate-100 text-slate-500'
-          }`}>
-            {internship.compensationType === 'Paid' ? `₹${internship.stipend?.toLocaleString()}/mo` : 'Unpaid'}
-          </span>
+          <span className="text-xs font-semibold text-slate-700">{summary.amount}</span>
+          <CompensationBadge compensationType={internship.compensationType} />
         </div>
       </div>
       <div className="flex items-center gap-1 shrink-0">

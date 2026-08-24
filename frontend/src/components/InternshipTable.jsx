@@ -1,4 +1,5 @@
 import { Sparkles } from 'lucide-react';
+import CompensationDisplay from './CompensationDisplay';
 
 function formatStartDate(value) {
   if (!value) return '—';
@@ -7,20 +8,6 @@ function formatStartDate(value) {
     month: 'short',
     year: 'numeric',
   });
-}
-
-function compensationLabel(internship) {
-  if (internship.compensationType === 'Paid') {
-    return `₹${Number(internship.stipend || 0).toLocaleString('en-IN')}/mo`;
-  }
-  if (internship.compensationType === 'Unpaid') return 'Unpaid';
-  return internship.compensationType || 'Not disclosed';
-}
-
-function compensationClass(internship) {
-  if (internship.compensationType === 'Paid') return 'bg-emerald-50 text-emerald-700';
-  if (internship.compensationType === 'Unpaid') return 'bg-amber-50 text-amber-700';
-  return 'bg-slate-100 text-slate-600';
 }
 
 function matchClass(score) {
@@ -88,9 +75,7 @@ export default function InternshipTable({ internships, onViewDetails, title, loa
                 </td>
                 <td className="whitespace-nowrap px-4 py-4 text-slate-700">{internship.location || '—'}</td>
                 <td className="px-4 py-4">
-                  <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${compensationClass(internship)}`}>
-                    {compensationLabel(internship)}
-                  </span>
+                  <CompensationDisplay internship={internship} />
                 </td>
                 <td className="whitespace-nowrap px-4 py-4 text-slate-700">
                   {internship.certificateType || internship.certificate || '—'}

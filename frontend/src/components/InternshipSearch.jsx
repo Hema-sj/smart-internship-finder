@@ -1,9 +1,9 @@
 import { Search, BookOpen, Calendar, ArrowUpDown } from 'lucide-react';
 
 const COMP_FILTERS = [
-  { value: 'All', label: 'All Internships' },
-  { value: 'Paid', label: 'Paid Internships' },
-  { value: 'Unpaid', label: 'Unpaid Internships' },
+  { value: 'All', label: 'All' },
+  { value: 'Paid', label: 'Paid' },
+  { value: 'Unpaid', label: 'Unpaid' },
 ];
 
 const SORT_OPTIONS = [
@@ -26,20 +26,25 @@ export default function InternshipSearch({
       <h2 className="text-xl font-bold text-slate-900">Search Internships</h2>
 
       <div className="mt-4 flex w-full gap-1.5 overflow-x-auto rounded-xl bg-slate-100 p-1 sm:w-fit sm:flex-wrap">
-        {COMP_FILTERS.map((option) => (
+        {COMP_FILTERS.map((option) => {
+          const active = compensationType === option.value;
+          const activeClass = option.value === 'Paid'
+            ? 'bg-emerald-600 text-white shadow-sm'
+            : option.value === 'Unpaid'
+            ? 'bg-orange-600 text-white shadow-sm'
+            : 'bg-slate-800 text-white shadow-sm';
+          return (
           <button
             key={option.value}
             type="button"
             onClick={() => onCompensationChange(option.value)}
             className={`shrink-0 rounded-lg px-3 py-2 text-sm font-bold transition sm:px-4 ${
-              compensationType === option.value
-                ? 'bg-emerald-700 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-white'
+              active ? activeClass : 'text-slate-600 hover:bg-white'
             }`}
           >
             {option.label}
           </button>
-        ))}
+        );})}
       </div>
 
       <form

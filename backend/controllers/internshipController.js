@@ -11,6 +11,8 @@ import Internship from '../models/Internship.js';
 import Company    from '../models/Company.js';     // must be imported to register schema
 import '../models/Skill.js';                        // must be imported to register schema
 import { escapeRegex, locationRegex } from '../constants/locations.js';
+import { normalizeCompensationType } from '../constants/compensation.js';
+import { normalizeCertificateType } from '../constants/certificates.js';
 import { aggregateLocationStats } from '../services/locationStats.js';
 
 // ─── Sort presets ─────────────────────────────────────────────────────────────
@@ -26,19 +28,28 @@ async function buildFilters(query, overrides = {}) {
   const filters = { status: 'Open' };
 
   // Allow caller to force a value (used by shorthand helpers)
-  const compensationType = overrides.compensationType ?? query.compensationType ?? query.comp;
+  const rawCompensation    = overrides.compensationType ?? query.compensationType ?? query.comp;
+  const compensationType   = normalizeCompensationType(rawCompensation);
   const location         = overrides.location         ?? query.location;
   const keyword          = query.keyword || query.q || query.search;
   const course           = query.course;
 
-  // ── Compensation ──
-  if (compensationType && compensationType !== 'All') {
+  // ── Compensation (exact match — Stipend Not Disclosed is its own category) ──
+  if (compensationType) {
     filters.compensationType = compensationType;
   }
 
-  // ── Certificate type ──
-  if (query.certificateType && query.certificateType !== 'All') {
-    filters.certificateType = query.certificateType;
+  // ── Certificate type (Phase 8) ──
+  // Supports ?certificateType=Hard Copy|Soft Copy|Both|Not Provided|Not Disclosed
+  // and ?certificateProvided=true|false. Both combine with every other filter.
+  const certificateType = normalizeCertificateType(query.certificateType);
+  if (certificateType) {
+    filters.certificateType = certificateType;
+  }
+  if (query.certificateProvided === 'true' || query.certificateProvided === true) {
+    filters.certificateProvided = true;
+  } else if (query.certificateProvided === 'false' || query.certificateProvided === false) {
+    filters.certificateProvided = false;
   }
 
   // ── Location (exact, case-insensitive) — MongoDB only ──
@@ -127,8 +138,10 @@ export async function listInternships(request, response, next) {
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
       sort:        request.query.sort || 'bestMatch',
       filters: {
-        compensationType: request.forcedCompensationType || request.query.compensationType || request.query.comp || 'All',
-        certificateType:  request.query.certificateType  || 'All',
+        compensationType: request.forcedCompensationType
+          || normalizeCompensationType(request.query.compensationType || request.query.comp)
+          || 'All',
+        certificateType:  normalizeCertificateType(request.query.certificateType) || 'All',
         location:         request.forcedLocation || request.query.location || '',
         course:           request.query.course            || '',
         keyword:          request.query.keyword || request.query.q || request.query.search || '',
@@ -165,13 +178,20 @@ export async function listLocations(request, response, next) {
 export async function getStats(request, response, next) {
   try {
     const [
-      total, paid, unpaid, remote,
+      total, paid, unpaid, stipendNotDisclosed, remote,
+      hardCopy, softCopy, bothCertificates, notProvided,
       avgStipend, topLocations, topCourses,
     ] = await Promise.all([
       Internship.countDocuments({ status: 'Open' }),
       Internship.countDocuments({ status: 'Open', compensationType: 'Paid' }),
       Internship.countDocuments({ status: 'Open', compensationType: 'Unpaid' }),
+      Internship.countDocuments({ status: 'Open', compensationType: 'Stipend Not Disclosed' }),
       Internship.countDocuments({ status: 'Open', location: /^remote$/i }),
+      // ── Phase 8: certificate statistics ──
+      Internship.countDocuments({ status: 'Open', certificateType: 'Hard Copy' }),
+      Internship.countDocuments({ status: 'Open', certificateType: 'Soft Copy' }),
+      Internship.countDocuments({ status: 'Open', certificateType: 'Both' }),
+      Internship.countDocuments({ status: 'Open', certificateProvided: false }),
       Internship.aggregate([
         { $match: { status: 'Open', compensationType: 'Paid', stipend: { $gt: 0 } } },
         { $group: { _id: null, avg: { $avg: '$stipend' } } },
@@ -191,7 +211,8 @@ export async function getStats(request, response, next) {
     ]);
 
     response.json({
-      total, paid, unpaid, remote,
+      total, paid, unpaid, stipendNotDisclosed, remote,
+      hardCopy, softCopy, bothCertificates, notProvided,
       avgStipend: Math.round(avgStipend[0]?.avg || 0),
       topLocations,
       topCourses,
