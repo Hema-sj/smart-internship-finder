@@ -20,11 +20,14 @@ export const markNotificationRead   = (id) => api.patch(`/students/me/notificati
 export const markAllNotificationsRead = () => api.patch('/students/me/notifications/read-all').then(r => r.data);
 
 // ─── Resumes ──────────────────────────────────────────────────────────────────
-export const getResumes    = ()   => api.get('/students/me/resumes').then(r => r.data);
-export const uploadResume  = (formData) => api.post('/students/me/resumes', formData, {
+export const getResumes       = ()         => api.get('/students/me/resumes').then(r => r.data);
+export const getResumeById    = (id)       => api.get(`/students/me/resumes/${id}`).then(r => r.data);
+export const uploadResume     = (formData) => api.post('/students/me/resumes/upload', formData, {
   headers: { 'Content-Type': 'multipart/form-data' }
 }).then(r => r.data);
-export const deleteResume  = (id) => api.delete(`/students/me/resumes/${id}`).then(r => r.data);
+export const updateResume     = (id, data) => api.put(`/students/me/resumes/${id}`, data).then(r => r.data);
+export const deleteResume     = (id)       => api.delete(`/students/me/resumes/${id}`).then(r => r.data);
+export const generateAIResume = (data)     => api.post('/students/me/resumes/generate', data).then(r => r.data);
 
 // ─── Reviews ──────────────────────────────────────────────────────────────────
 export const getCompanyReviews = (companyId) => api.get('/reviews', { params: { companyId } }).then(r => r.data);

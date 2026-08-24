@@ -1,105 +1,261 @@
-import { Sparkles } from 'lucide-react';
-import CompensationDisplay from './CompensationDisplay';
+import { ExternalLink, AlertCircle, CheckCircle, Eye } from 'lucide-react';
+import { useState } from 'react';
 
-function formatStartDate(value) {
-  if (!value) return '—';
-  return new Date(value).toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
+/**
+ * InternshipTable - Displays internships in tabular format with 9 columns
+ * Columns: Starting Date, Company, Internship Role, Location, Duration, 
+ *          Required Skills, Compensation, Paid/Unpaid, Official Link
+ * Optional: Application Deadline column (when showDeadline is true)
+ */
+export default function InternshipTable({ internships, loading, onViewDetails, emptyMessage, showDeadline = false }) {
+  const [expandedSkills, setExpandedSkills] = useState({});
 
-function matchClass(score) {
-  if (score >= 85) return 'text-emerald-700 bg-emerald-50';
-  if (score >= 70) return 'text-amber-700 bg-amber-50';
-  return 'text-slate-600 bg-slate-100';
-}
+  const toggleSkills = (id) => {
+    setExpandedSkills(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
 
-function companyName(internship) {
-  return internship.companyId?.name || internship.company?.name || internship.company || '—';
-}
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-slate-500">Loading internships...</div>
+      </div>
+    );
+  }
 
-export default function InternshipTable({ internships, onViewDetails, title, loading, emptyMessage }) {
+  if (!internships || internships.length === 0) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
+        <AlertCircle className="mx-auto mb-3 text-slate-400" size={32} />
+        <p className="font-semibold text-slate-700">{emptyMessage || 'No internships found'}</p>
+        <p className="mt-1 text-sm text-slate-500">Try adjusting your filters or search criteria</p>
+      </div>
+    );
+  }
+
   return (
-    <section>
-      {title && (
-        <div className="flex items-end justify-between gap-3">
-          <h2 className="text-2xl font-bold text-slate-900">{title}</h2>
-          <span className="text-sm text-slate-500">{internships.length} results</span>
-        </div>
-      )}
+    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+      <table className="w-full min-w-max">
+        <thead>
+          <tr className="border-b border-slate-200 bg-slate-50">
+            <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600">
+              Starting Date
+            </th>
+            {showDeadline && (
+              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600">
+                Application Deadline
+              </th>
+            )}
+            <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600">
+              Company
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600">
+              Internship Role
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600">
+              Location
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600">
+              Duration
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600">
+              Required Skills
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600">
+              Compensation
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600">
+              Paid / Unpaid
+            </th>
+            <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-slate-600">
+              Official Link
+            </th>
+            <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-slate-600">
+              Details
+            </th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {internships.map((internship) => {
+            const isExpanded = expandedSkills[internship._id];
+            const hasMoreSkills = internship.displaySkillsRemaining > 0;
+            
+            return (
+              <tr 
+                key={internship._id} 
+                className="hover:bg-slate-50 transition-colors"
+              >
+                {/* Starting Date */}
+                <td className="px-4 py-4 text-sm text-slate-700 whitespace-nowrap">
+                  {internship.displayStartingDate}
+                </td>
 
-      <div className={`${title ? 'mt-5' : ''} overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm`}>
-        <table className="min-w-[920px] w-full text-left text-sm">
-          <thead className="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
-            <tr>
-              <th className="px-4 py-3">Starting Date</th>
-              <th className="px-4 py-3">Company</th>
-              <th className="px-4 py-3">Course / Role</th>
-              <th className="px-4 py-3">Location</th>
-              <th className="px-4 py-3">Compensation</th>
-              <th className="px-4 py-3">Certificate</th>
-              <th className="px-4 py-3">AI Match</th>
-              <th className="px-4 py-3 text-right">View Details</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {loading ? (
-              Array.from({ length: 6 }).map((_, index) => (
-                <tr key={index} className="animate-pulse">
-                  {Array.from({ length: 8 }).map((__, cell) => (
-                    <td key={cell} className="px-4 py-4">
-                      <div className="h-4 w-20 rounded bg-slate-100" />
-                    </td>
-                  ))}
-                </tr>
-              ))
-            ) : internships.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="px-4 py-16 text-center text-slate-500">
-                  {emptyMessage || 'No internships match these filters.'}
-                </td>
-              </tr>
-            ) : internships.map((internship) => (
-              <tr key={internship._id || internship.id} className="hover:bg-emerald-50/40">
-                <td className="whitespace-nowrap px-4 py-4 font-medium text-slate-700">
-                  {formatStartDate(internship.startDate)}
-                </td>
-                <td className="px-4 py-4 font-semibold text-slate-900">
-                  {companyName(internship)}
-                </td>
+                {/* Application Deadline (optional) */}
+                {showDeadline && (
+                  <td className="px-4 py-4 text-sm text-slate-700 whitespace-nowrap">
+                    <div className="flex flex-col">
+                      <span>{internship.displayDeadline}</span>
+                      {internship.applicationDeadline && (
+                        <span className="text-xs text-slate-500 mt-0.5">
+                          {(() => {
+                            const now = new Date();
+                            const deadline = new Date(internship.applicationDeadline);
+                            const daysLeft = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
+                            if (daysLeft < 0) return 'Expired';
+                            if (daysLeft === 0) return 'Today';
+                            if (daysLeft === 1) return '1 day left';
+                            if (daysLeft <= 7) return `${daysLeft} days left`;
+                            return null;
+                          })()}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                )}
+
+                {/* Company */}
                 <td className="px-4 py-4">
-                  <p className="font-semibold text-slate-900">{internship.course || '—'}</p>
-                  <p className="text-xs text-slate-500">{internship.title}</p>
+                  <div className="flex items-center gap-2">
+                    {internship.displayCompanyLogo && (
+                      <img 
+                        src={internship.displayCompanyLogo} 
+                        alt={internship.displayCompany}
+                        className="h-8 w-8 rounded object-contain"
+                      />
+                    )}
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-slate-800 text-sm">
+                          {internship.displayCompany}
+                        </span>
+                        {internship.displayCompanyVerified && (
+                          <CheckCircle size={12} className="text-emerald-600" />
+                        )}
+                      </div>
+                      {internship.isDemoData && (
+                        <span className="text-xs text-amber-600 font-medium">Demo Data</span>
+                      )}
+                    </div>
+                  </div>
                 </td>
-                <td className="whitespace-nowrap px-4 py-4 text-slate-700">{internship.location || '—'}</td>
+
+                {/* Internship Role */}
                 <td className="px-4 py-4">
-                  <CompensationDisplay internship={internship} />
+                  <div className="text-sm font-semibold text-slate-800 max-w-xs">
+                    {internship.title}
+                  </div>
+                  <div className="text-xs text-slate-500 mt-0.5">
+                    {internship.courseRole}
+                  </div>
                 </td>
-                <td className="whitespace-nowrap px-4 py-4 text-slate-700">
-                  {internship.certificateType || internship.certificate || '—'}
+
+                {/* Location */}
+                <td className="px-4 py-4 text-sm text-slate-700 whitespace-nowrap">
+                  <div>{internship.location}</div>
+                  {internship.mode && (
+                    <div className="text-xs text-slate-500 mt-0.5 capitalize">
+                      {internship.mode}
+                    </div>
+                  )}
                 </td>
+
+                {/* Duration */}
+                <td className="px-4 py-4 text-sm text-slate-700 whitespace-nowrap">
+                  {internship.displayDuration}
+                </td>
+
+                {/* Required Skills */}
                 <td className="px-4 py-4">
-                  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${matchClass(internship.aiMatch || 0)}`}>
-                    <Sparkles size={11} />
-                    {internship.aiMatch ?? 0}%
+                  <div className="flex flex-wrap gap-1 max-w-xs">
+                    {(isExpanded ? internship.requiredSkills : internship.displaySkills).map((skill, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-block rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                    {hasMoreSkills && !isExpanded && (
+                      <button
+                        onClick={() => toggleSkills(internship._id)}
+                        className="inline-block rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-200 transition"
+                      >
+                        +{internship.displaySkillsRemaining} More
+                      </button>
+                    )}
+                    {hasMoreSkills && isExpanded && (
+                      <button
+                        onClick={() => toggleSkills(internship._id)}
+                        className="inline-block rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-200 transition"
+                      >
+                        Show Less
+                      </button>
+                    )}
+                  </div>
+                </td>
+
+                {/* Compensation */}
+                <td className="px-4 py-4 text-sm font-semibold text-slate-700 whitespace-nowrap">
+                  {internship.displayCompensation}
+                </td>
+
+                {/* Paid / Unpaid */}
+                <td className="px-4 py-4 whitespace-nowrap">
+                  <span
+                    className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      internship.displayInternshipType === 'Paid'
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : internship.displayInternshipType === 'Unpaid'
+                        ? 'bg-slate-100 text-slate-700'
+                        : 'bg-amber-50 text-amber-700'
+                    }`}
+                  >
+                    {internship.displayInternshipType}
                   </span>
                 </td>
-                <td className="px-4 py-4 text-right">
-                  <button
-                    type="button"
-                    onClick={() => onViewDetails?.(internship)}
-                    className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-800"
-                  >
-                    View Details
-                  </button>
+
+                {/* Official Link */}
+                <td className="px-4 py-4 text-center">
+                  {internship.displayOfficialLinkAvailable ? (
+                    <a
+                      href={internship.displayOfficialLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-800 transition active:scale-95"
+                    >
+                      Apply Now
+                      <ExternalLink size={12} />
+                    </a>
+                  ) : (
+                    <button
+                      disabled
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-slate-200 px-4 py-2 text-xs font-semibold text-slate-500 cursor-not-allowed"
+                      title="Official application link not available"
+                    >
+                      Not Available
+                    </button>
+                  )}
+                </td>
+
+                {/* View Details */}
+                <td className="px-4 py-4 text-center">
+                  {onViewDetails && (
+                    <button
+                      onClick={() => onViewDetails(internship)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+                    >
+                      <Eye size={12} />
+                      View
+                    </button>
+                  )}
                 </td>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }

@@ -27,6 +27,10 @@ import ApplicationsPage        from './pages/ApplicationsPage';
 import SavedPage               from './pages/SavedPage';
 import ProfilePage             from './pages/ProfilePage';
 import ResumePage              from './pages/ResumePage';
+import ResumeUploadPage        from './pages/ResumeUploadPage';
+import ResumeAnalysisPage      from './pages/ResumeAnalysisPage';
+import AIResumeBuilderPage     from './pages/AIResumeBuilderPage';
+import ResumePreviewPage       from './pages/ResumePreviewPage';
 import ResourcesPage           from './pages/ResourcesPage';
 import NotificationsPage       from './pages/NotificationsPage';
 
@@ -68,13 +72,17 @@ export default function App() {
             <DashboardLayout />
           </StudentRoute>
         }>
-          <Route path="/dashboard"      element={<StudentDashboardPage />} />
-          <Route path="/applications"   element={<ApplicationsPage />} />
-          <Route path="/saved"          element={<SavedPage />} />
-          <Route path="/profile"        element={<ProfilePage />} />
-          <Route path="/resume"         element={<ResumePage />} />
-          <Route path="/resources"      element={<ResourcesPage />} />
-          <Route path="/notifications"  element={<NotificationsPage />} />
+          <Route path="/dashboard"               element={<StudentDashboardPage />} />
+          <Route path="/dashboard/applications"  element={<ApplicationsPage />} />
+          <Route path="/dashboard/saved"         element={<SavedPage />} />
+          <Route path="/dashboard/profile"       element={<ProfilePage />} />
+          <Route path="/dashboard/resume"        element={<ResumePage />} />
+          <Route path="/dashboard/resume/upload" element={<ResumeUploadPage />} />
+          <Route path="/dashboard/resume/analysis/:id" element={<ResumeAnalysisPage />} />
+          <Route path="/dashboard/resume/ai-builder" element={<AIResumeBuilderPage />} />
+          <Route path="/dashboard/resume/preview/:id" element={<ResumePreviewPage />} />
+          <Route path="/dashboard/resources"     element={<ResourcesPage />} />
+          <Route path="/dashboard/notifications" element={<NotificationsPage />} />
         </Route>
 
         {/* ── Company portal ── */}

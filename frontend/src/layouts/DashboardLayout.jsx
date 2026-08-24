@@ -8,15 +8,15 @@ import {
 import { useState } from 'react';
 
 const NAV = [
-  { to: '/dashboard',       icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/internships',     icon: Search,           label: 'Internships' },
-  { to: '/locations',       icon: MapPin,           label: 'Locations' },
-  { to: '/applications',    icon: Briefcase,        label: 'Applications' },
-  { to: '/saved',           icon: Bookmark,         label: 'Saved' },
-  { to: '/profile',         icon: UserCircle,       label: 'Profile' },
-  { to: '/resume',          icon: FileText,         label: 'Resume Builder' },
-  { to: '/resources',       icon: BookOpen,         label: 'Resources' },
-  { to: '/notifications',   icon: Bell,             label: 'Notifications' },
+  { to: '/dashboard',                    icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/internships',                  icon: Search,           label: 'Internships' },
+  { to: '/locations',                    icon: MapPin,           label: 'Locations' },
+  { to: '/dashboard/applications',       icon: Briefcase,        label: 'Applications' },
+  { to: '/dashboard/saved',              icon: Bookmark,         label: 'Saved' },
+  { to: '/dashboard/profile',            icon: UserCircle,       label: 'Profile' },
+  { to: '/dashboard/resume',             icon: FileText,         label: 'Resume Builder' },
+  { to: '/dashboard/resources',          icon: BookOpen,         label: 'Resources' },
+  { to: '/dashboard/notifications',      icon: Bell,             label: 'Notifications' },
 ];
 
 function SidebarLink({ to, icon: Icon, label, onClick }) {

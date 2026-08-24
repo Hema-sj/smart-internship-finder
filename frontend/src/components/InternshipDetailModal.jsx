@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import {
   X, MapPin, Calendar, IndianRupee, Award, Briefcase, Clock,
-  ExternalLink, Sparkles, Star, Globe, CheckCircle, BookOpen
+  ExternalLink, Sparkles, Star, Globe, CheckCircle, BookOpen, AlertCircle
 } from 'lucide-react';
 
 import CompensationBadge from './CompensationBadge';
@@ -80,6 +80,12 @@ export default function InternshipDetailModal({ internship, onClose }) {
                     <CheckCircle size={11} /> Verified
                   </span>
                 )}
+                {/* Demo Internship Badge */}
+                {internship.isVerified === false && (
+                  <span className="flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-semibold text-amber-100 border border-amber-300/30">
+                    <AlertCircle size={10} /> Demo Internship
+                  </span>
+                )}
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 <CompensationBadge compensationType={internship.compensationType} />
@@ -103,14 +109,41 @@ export default function InternshipDetailModal({ internship, onClose }) {
             {/* Left — details */}
             <div className="p-6">
               <h3 className="mb-1 text-xs font-bold uppercase tracking-widest text-slate-400">Internship Details</h3>
-              <InfoRow icon={MapPin} label="Location" value={`${internship.location} ${internship.mode === 'remote' ? '(Remote)' : internship.mode === 'hybrid' ? '(Hybrid)' : ''}`} />
-              <InfoRow icon={BookOpen} label="Course / Role" value={internship.course} />
-              <InfoRow icon={Calendar} label="Starting Date" value={internship.startDate ? new Date(internship.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : null} />
-              <InfoRow icon={Clock} label="Duration" value={internship.duration} />
-              <InfoRow icon={IndianRupee} label="Compensation" value={stipendDisplay} />
+              <InfoRow icon={MapPin} label="Location" value={`${internship.location} ${internship.mode === 'Remote' ? '(Remote)' : internship.mode === 'Hybrid' ? '(Hybrid)' : ''}`} />
+              <InfoRow icon={BookOpen} label="Course / Role" value={internship.courseRole || internship.course} />
+              <InfoRow icon={Calendar} label="Starting Date" value={internship.displayStartingDate || (internship.startingDate ? new Date(internship.startingDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Not Announced')} />
+              <InfoRow icon={Clock} label="Duration" value={internship.displayDuration || internship.duration || 'Not Disclosed'} />
+              <InfoRow icon={IndianRupee} label="Compensation" value={internship.displayCompensation || stipendDisplay} />
               <InfoRow icon={Award} label="Certificate" value={internship.certificateType} />
-              {internship.applicationDeadline && (
-                <InfoRow icon={Calendar} label="Apply Before" value={new Date(internship.applicationDeadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })} />
+              
+              {/* Application Deadline with urgency indicator */}
+              {(internship.applicationDeadline || internship.displayDeadline !== 'Not Announced') && (
+                <div className="flex items-start gap-3 py-3 border-b border-slate-100 last:border-0">
+                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-50">
+                    <Calendar size={15} className="text-red-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-400 font-medium">Apply Before</p>
+                    <p className="text-sm font-semibold text-slate-800">
+                      {internship.displayDeadline || (internship.applicationDeadline ? new Date(internship.applicationDeadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Not Announced')}
+                    </p>
+                    {internship.applicationDeadline && (
+                      <p className="text-xs text-red-600 font-semibold mt-0.5">
+                        {(() => {
+                          const now = new Date();
+                          const deadline = new Date(internship.applicationDeadline);
+                          const daysLeft = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
+                          if (daysLeft < 0) return '⚠ Deadline passed';
+                          if (daysLeft === 0) return '🔥 Apply today!';
+                          if (daysLeft === 1) return '⏰ 1 day left';
+                          if (daysLeft <= 3) return `⏰ ${daysLeft} days left`;
+                          if (daysLeft <= 7) return `${daysLeft} days left`;
+                          return null;
+                        })()}
+                      </p>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
 
@@ -118,7 +151,7 @@ export default function InternshipDetailModal({ internship, onClose }) {
             <div className="p-6">
               <h3 className="mb-1 text-xs font-bold uppercase tracking-widest text-slate-400">Company</h3>
               <div className="mb-4 rounded-xl bg-slate-50 p-4">
-                <p className="font-bold text-slate-800">{company.name}</p>
+                <p className="font-bold text-slate-800">{company.companyName || company.name}</p>
                 {company.location && <p className="mt-0.5 text-xs text-slate-500 flex items-center gap-1"><MapPin size={10}/>{company.location}</p>}
                 {company.rating > 0 && (
                   <p className="mt-1.5 flex items-center gap-1 text-xs text-slate-600">
@@ -159,25 +192,55 @@ export default function InternshipDetailModal({ internship, onClose }) {
         </div>
 
         {/* Footer CTA */}
-        <div className="border-t border-slate-100 bg-slate-50 px-6 py-4 flex items-center gap-3">
-          <a
-            href={internship.applicationUrl || '#'}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-6 py-3 text-sm font-bold text-white transition hover:bg-emerald-800 active:scale-[0.98]"
-          >
-            Apply Now <ExternalLink size={14} />
-          </a>
-          {internship.internshipDetailsUrl && internship.internshipDetailsUrl !== '#' && (
-            <a
-              href={internship.internshipDetailsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300"
-            >
-              <Briefcase size={14} /> Details
-            </a>
-          )}
+        <div className="border-t border-slate-100 bg-slate-50 px-6 py-4">
+          {/* Official Internship Link Section */}
+          <div className="mb-3">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Official Internship Link</h3>
+            {internship.applicationUrl ? (
+              <div className="flex items-center gap-3">
+                <a
+                  href={internship.applicationUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-6 py-3 text-sm font-bold text-white transition hover:bg-emerald-800 active:scale-[0.98]"
+                >
+                  Apply Now <ExternalLink size={14} />
+                </a>
+                {internship.internshipDetailsUrl && (
+                  <a
+                    href={internship.internshipDetailsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                  >
+                    <Briefcase size={14} /> View Details
+                  </a>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 py-4 text-center">
+                <div className="flex items-center justify-center gap-2 text-slate-500">
+                  <AlertCircle size={16} />
+                  <span className="text-sm font-semibold">Application Link Not Available</span>
+                </div>
+                <p className="mt-1 text-xs text-slate-400">
+                  {internship.isVerified === false 
+                    ? 'This is demo data. No official application link has been provided.' 
+                    : 'No official application link has been provided for this internship.'}
+                </p>
+                {company.website && (
+                  <a
+                    href={company.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:underline"
+                  >
+                    <Globe size={12} /> Visit Company Website
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
