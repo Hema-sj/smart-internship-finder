@@ -1,30 +1,61 @@
-import mongoose from 'mongoose';
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/database.js';
 
-const companySchema = new mongoose.Schema({
-  // Link to the User account that owns this company profile
-  userId:          { type: mongoose.Schema.Types.ObjectId, ref: 'User', unique: true, sparse: true },
-  companyName:     { type: String, required: true, trim: true, unique: true },
-  logo:            { type: String, trim: true },
-  description:     { type: String, trim: true, maxlength: 2000 },
-  website:         { type: String, trim: true },
-  industry:        { type: String, trim: true, required: true },
-  verified_status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending', index: true },
-}, { 
+const Company = sequelize.define('Company', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true,
+  },
+  userId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: {
+      model: 'users',
+      key: 'id',
+    },
+    onDelete: 'CASCADE',
+  },
+  companyName: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true,
+  },
+  description: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  website: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  industry: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  location: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  logo: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  careersUrl: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  verified_status: {
+    type: DataTypes.ENUM('pending', 'approved', 'rejected'),
+    defaultValue: 'pending',
+  },
+}, {
+  tableName: 'companies',
   timestamps: true,
-  toJSON: { 
-    transform: (doc, ret) => {
-      delete ret.__v;
-      return ret;
-    }
-  }
+  indexes: [
+    { fields: ['companyName'], unique: true },
+    { fields: ['verified_status'] },
+  ],
 });
 
-// Never return password in any query
-companySchema.set('toJSON', {
-  transform: (doc, ret) => {
-    delete ret.__v;
-    return ret;
-  }
-});
-
-export default mongoose.model('Company', companySchema);
+export default Company;

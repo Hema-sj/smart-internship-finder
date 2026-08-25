@@ -1,14 +1,17 @@
 import { Router } from 'express';
 import {
-  listLocations,
-  getLocation,
-  listInternshipsForLocation,
+  getLocationStats,
+  getLocationInternships,
+  getCompanyProfile,
 } from '../controllers/locationController.js';
 
 const router = Router();
 
-router.get('/', listLocations);
-router.get('/:location/internships', listInternshipsForLocation);
-router.get('/:location', getLocation);
+// Location statistics and data
+router.get('/:location/stats', getLocationStats);
+router.get('/:location/internships', getLocationInternships);
+
+// Company profile (added here for convenience)
+router.get('/company/:id', getCompanyProfile);
 
 export default router;

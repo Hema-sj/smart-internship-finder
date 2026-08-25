@@ -1,10 +1,38 @@
-import mongoose from 'mongoose';
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/database.js';
 
-const savedInternshipSchema = new mongoose.Schema({
-  studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'StudentProfile', required: true },
-  internshipId: { type: mongoose.Schema.Types.ObjectId, ref: 'Internship', required: true },
-  savedAt: { type: Date, default: Date.now }
-}, { timestamps: false });
+const SavedInternship = sequelize.define('SavedInternship', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true,
+  },
+  studentId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    references: {
+      model: 'users',
+      key: 'id',
+    },
+    onDelete: 'CASCADE',
+  },
+  internshipId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    references: {
+      model: 'internships',
+      key: 'id',
+    },
+    onDelete: 'CASCADE',
+  },
+}, {
+  tableName: 'saved_internships',
+  timestamps: true,
+  indexes: [
+    { fields: ['studentId'] },
+    { fields: ['internshipId'] },
+    { fields: ['studentId', 'internshipId'], unique: true },
+  ],
+});
 
-savedInternshipSchema.index({ studentId: 1, internshipId: 1 }, { unique: true });
-export default mongoose.model('SavedInternship', savedInternshipSchema);
+export default SavedInternship;

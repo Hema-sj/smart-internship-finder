@@ -8,24 +8,23 @@ import SavedInternship from '../models/SavedInternship.js';
 import Notification    from '../models/Notification.js';
 import Resume          from '../models/Resume.js';
 import Internship      from '../models/Internship.js';
-import Company         from '../models/Company.js';
+import '../models/Company.js';
+import '../models/Skill.js';
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
 async function getProfile(userId) {
-  return StudentProfile.findOne({ where: { userId } });
+  return StudentProfile.findOne({ userId });
 }
 
 // ─── Profile ─────────────────────────────────────────────────────────────────
 
 export async function getMyProfile(request, response, next) {
   try {
-    const profile = await StudentProfile.findOne({ where: { userId: request.user.id } });
+    const profile = await StudentProfile.findOne({ userId: request.user._id })
+      .populate('skills', 'name');
     if (!profile) return response.status(404).json({ message: 'Profile not found.' });
     response.json(profile);
-  } catch (error) { 
-    console.error('Get profile error:', error);
-    next(error); 
-  }
+  } catch (error) { next(error); }
 }
 
 export async function updateMyProfile(request, response, next) {
@@ -35,44 +34,29 @@ export async function updateMyProfile(request, response, next) {
     const updates = {};
     allowed.forEach((key) => { if (request.body[key] !== undefined) updates[key] = request.body[key]; });
 
-    const [updated] = await StudentProfile.update(updates, {
-      where: { userId: request.user.id },
-      returning: true
-    });
+    const profile = await StudentProfile.findOneAndUpdate(
+      { userId: request.user._id },
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).populate('skills', 'name');
 
-    if (!updated) return response.status(404).json({ message: 'Profile not found.' });
-    
-    const profile = await StudentProfile.findOne({ where: { userId: request.user.id } });
+    if (!profile) return response.status(404).json({ message: 'Profile not found.' });
     response.json(profile);
-  } catch (error) { 
-    console.error('Update profile error:', error);
-    next(error); 
-  }
+  } catch (error) { next(error); }
 }
 
 // ─── Applications ─────────────────────────────────────────────────────────────
 
 export async function getMyApplications(request, response, next) {
   try {
-    const profile = await getProfile(request.user.id);
+    const profile = await getProfile(request.user._id);
     if (!profile) return response.status(404).json({ message: 'Profile not found.' });
 
-    const applications = await Application.findAll({
-      where: { studentId: profile.id },
-      include: [
-        {
-          model: Internship,
-          as: 'internship',
-          include: [{ model: Company, as: 'company' }]
-        }
-      ],
-      order: [['createdAt', 'DESC']]
-    });
+    const applications = await Application.find({ studentId: profile._id })
+      .populate({ path: 'internshipId', populate: { path: 'companyId', select: 'name logo location' } })
+      .sort({ createdAt: -1 });
     response.json(applications);
-  } catch (error) { 
-    console.error('Get applications error:', error);
-    next(error); 
-  }
+  } catch (error) { next(error); }
 }
 
 export async function applyToInternship(request, response, next) {
@@ -80,85 +64,61 @@ export async function applyToInternship(request, response, next) {
     const { internshipId } = request.body;
     if (!internshipId) return response.status(400).json({ message: 'internshipId is required.' });
 
-    const internship = await Internship.findByPk(internshipId);
+    const internship = await Internship.findById(internshipId);
     if (!internship) return response.status(404).json({ message: 'Internship not found.' });
     if (internship.status !== 'Open') return response.status(400).json({ message: 'This internship is no longer accepting applications.' });
     if (internship.applicationDeadline < new Date()) return response.status(400).json({ message: 'Application deadline has passed.' });
 
-    const profile = await getProfile(request.user.id);
+    const profile = await getProfile(request.user._id);
     if (!profile) return response.status(404).json({ message: 'Student profile not found.' });
 
-    const existing = await Application.findOne({ 
-      where: { 
-        studentId: profile.id, 
-        internshipId 
-      } 
-    });
+    const existing = await Application.findOne({ studentId: profile._id, internshipId });
     if (existing) return response.status(409).json({ message: 'You have already applied to this internship.' });
 
     const application = await Application.create({
-      studentId:    profile.id,
-      internshipId: internship.id,
-      status:       'Pending',
+      studentId:    profile._id,
+      internshipId: internship._id,
       companyId:    internship.companyId,
     });
 
     // Fire notification
     await Notification.create({
-      studentId: profile.id,
-      type:      'application',
+      studentId: profile._id,
       title:     'Application Submitted',
       message:   `Your application for "${internship.title}" has been submitted successfully.`,
+      type:      'application',
     });
+
     response.status(201).json(application);
-  } catch (error) { 
-    console.error('Apply to internship error:', error);
-    next(error); 
-  }
+  } catch (error) { next(error); }
 }
 
 export async function withdrawApplication(request, response, next) {
   try {
-    const profile = await getProfile(request.user.id);
+    const profile = await getProfile(request.user._id);
     if (!profile) return response.status(404).json({ message: 'Profile not found.' });
 
-    const deleted = await Application.destroy({
-      where: {
-        id: request.params.id,
-        studentId: profile.id,
-      }
+    const application = await Application.findOneAndDelete({
+      _id: request.params.id,
+      studentId: profile._id,
     });
-    if (!deleted) return response.status(404).json({ message: 'Application not found.' });
+    if (!application) return response.status(404).json({ message: 'Application not found.' });
     response.json({ message: 'Application withdrawn successfully.' });
-  } catch (error) { 
-    console.error('Withdraw application error:', error);
-    next(error); 
-  }
+  } catch (error) { next(error); }
 }
 
 // ─── Saved Internships ────────────────────────────────────────────────────────
 
 export async function getSaved(request, response, next) {
   try {
-    const profile = await getProfile(request.user.id);
+    const profile = await getProfile(request.user._id);
     if (!profile) return response.status(404).json({ message: 'Profile not found.' });
 
-    const saved = await SavedInternship.findAll({
-      where: { studentId: profile.id },
-      include: [
-        {
-          model: Internship,
-          as: 'internship',
-          include: [{ model: Company, as: 'company' }]
-        }
-      ],
-      order: [['createdAt', 'DESC']]
-    });
+    const saved = await SavedInternship.find({ studentId: profile._id })
+      .populate({ path: 'internshipId', populate: { path: 'companyId', select: 'name logo location' } })
+      .sort({ savedAt: -1 });
     response.json(saved);
-  } catch (error) { 
-    console.error('Get saved error:', error);
-    next(error); 
-  }
+  } catch (error) { next(error); }
 }
 
 export async function saveInternship(request, response, next) {
@@ -166,168 +126,92 @@ export async function saveInternship(request, response, next) {
     const { internshipId } = request.body;
     if (!internshipId) return response.status(400).json({ message: 'internshipId is required.' });
 
-    const profile = await getProfile(request.user.id);
+    const profile = await getProfile(request.user._id);
     if (!profile) return response.status(404).json({ message: 'Profile not found.' });
 
-    const existing = await SavedInternship.findOne({ 
-      where: { 
-        studentId: profile.id, 
-        internshipId 
-      } 
-    });
+    const existing = await SavedInternship.findOne({ studentId: profile._id, internshipId });
     if (existing) return response.status(409).json({ message: 'Already saved.' });
 
-    const saved = await SavedInternship.create({ studentId: profile.id, internshipId });
+    const saved = await SavedInternship.create({ studentId: profile._id, internshipId });
     response.status(201).json(saved);
-  } catch (error) { 
-    console.error('Save internship error:', error);
-    next(error); 
-  }
+  } catch (error) { next(error); }
 }
 
 export async function unsaveInternship(request, response, next) {
   try {
-    const profile = await getProfile(request.user.id);
+    const profile = await getProfile(request.user._id);
     if (!profile) return response.status(404).json({ message: 'Profile not found.' });
 
-    const deleted = await SavedInternship.destroy({ 
-      where: { 
-        id: request.params.id, 
-        studentId: profile.id 
-      } 
-    });
+    const deleted = await SavedInternship.findOneAndDelete({ _id: request.params.id, studentId: profile._id });
     if (!deleted) return response.status(404).json({ message: 'Saved internship not found.' });
     response.json({ message: 'Removed from saved internships.' });
-  } catch (error) { 
-    console.error('Unsave internship error:', error);
-    next(error); 
-  }
+  } catch (error) { next(error); }
 }
 
 // ─── Notifications ────────────────────────────────────────────────────────────
 
 export async function getNotifications(request, response, next) {
   try {
-    const profile = await getProfile(request.user.id);
+    const profile = await getProfile(request.user._id);
     if (!profile) return response.status(404).json({ message: 'Profile not found.' });
 
-    const notifications = await Notification.findAll({
-      where: { studentId: profile.id },
-      order: [['createdAt', 'DESC']],
-      limit: 50
-    });
+    const notifications = await Notification.find({ studentId: profile._id })
+      .sort({ createdAt: -1 })
+      .limit(50);
     response.json(notifications);
-  } catch (error) { 
-    console.error('Get notifications error:', error);
-    next(error); 
-  }
+  } catch (error) { next(error); }
 }
 
 export async function markNotificationRead(request, response, next) {
   try {
-    const profile = await getProfile(request.user.id);
+    const profile = await getProfile(request.user._id);
     if (!profile) return response.status(404).json({ message: 'Profile not found.' });
 
-    const [updated] = await Notification.update(
+    const notification = await Notification.findOneAndUpdate(
+      { _id: request.params.id, studentId: profile._id },
       { read: true },
-      {
-        where: {
-          id: request.params.id,
-          studentId: profile.id
-        }
-      }
+      { new: true }
     );
-    
-    if (!updated) return response.status(404).json({ message: 'Notification not found.' });
-    
-    const notification = await Notification.findByPk(request.params.id);
+    if (!notification) return response.status(404).json({ message: 'Notification not found.' });
     response.json(notification);
-  } catch (error) { 
-    console.error('Mark notification read error:', error);
-    next(error); 
-  }
+  } catch (error) { next(error); }
 }
 
 export async function markAllNotificationsRead(request, response, next) {
   try {
-    const profile = await getProfile(request.user.id);
+    const profile = await getProfile(request.user._id);
     if (!profile) return response.status(404).json({ message: 'Profile not found.' });
-    
-    await Notification.update(
-      { read: true },
-      {
-        where: {
-          studentId: profile.id,
-          read: false
-        }
-      }
-    );
+    await Notification.updateMany({ studentId: profile._id, read: false }, { read: true });
     response.json({ message: 'All notifications marked as read.' });
-  } catch (error) { 
-    console.error('Mark all notifications read error:', error);
-    next(error); 
-  }
+  } catch (error) { next(error); }
 }
 
 // ─── Resumes ──────────────────────────────────────────────────────────────────
 
 export async function getResumes(request, response, next) {
   try {
-    const profile = await getProfile(request.user.id);
+    const profile = await getProfile(request.user._id);
     if (!profile) return response.status(404).json({ message: 'Profile not found.' });
 
-    const resumes = await Resume.findAll({
-      where: { studentId: profile.id },
-      order: [['uploadedAt', 'DESC']]
-    });
-    
-    // Add _id alias for frontend compatibility
-    const resumesWithAlias = resumes.map(r => {
-      const data = r.toJSON();
-      data._id = data.id;
-      return data;
-    });
-    
-    response.json(resumesWithAlias);
-  } catch (error) { 
-    console.error('Get resumes error:', error);
-    next(error); 
-  }
+    const resumes = await Resume.find({ studentId: profile._id }).sort({ uploadedAt: -1 });
+    response.json(resumes);
+  } catch (error) { next(error); }
 }
 
 export async function getResumeById(request, response, next) {
   try {
-    console.log('getResumeById called with id:', request.params.id);
-    
-    if (!request.params.id || request.params.id === 'undefined') {
-      return response.status(400).json({ message: 'Invalid resume ID' });
-    }
-    
-    const profile = await getProfile(request.user.id);
+    const profile = await getProfile(request.user._id);
     if (!profile) return response.status(404).json({ message: 'Profile not found.' });
 
-    const resume = await Resume.findOne({ 
-      where: { 
-        id: request.params.id, 
-        studentId: profile.id 
-      } 
-    });
+    const resume = await Resume.findOne({ _id: request.params.id, studentId: profile._id });
     if (!resume) return response.status(404).json({ message: 'Resume not found.' });
-    
-    // Add _id alias for frontend compatibility
-    const resumeData = resume.toJSON();
-    resumeData._id = resumeData.id;
-    
-    response.json(resumeData);
-  } catch (error) { 
-    console.error('Get resume by id error:', error);
-    next(error); 
-  }
+    response.json(resume);
+  } catch (error) { next(error); }
 }
 
 export async function uploadResume(request, response, next) {
   try {
-    const profile = await getProfile(request.user.id);
+    const profile = await getProfile(request.user._id);
     if (!profile) return response.status(404).json({ message: 'Profile not found.' });
 
     if (!request.file) return response.status(400).json({ message: 'No file uploaded.' });
@@ -396,7 +280,7 @@ export async function uploadResume(request, response, next) {
     }
 
     const resume = await Resume.create({
-      studentId:          profile.id,
+      studentId:          profile._id,
       fileName:           file.originalname,
       fileSize:           file.size,
       filePath:           file.path || '',
@@ -418,84 +302,81 @@ export async function uploadResume(request, response, next) {
       aiConfidenceScore:  extractedData.aiConfidenceScore || 0,
     });
 
-    console.log('Resume created successfully:', {
-      id: resume.id,
-      fileName: resume.fileName,
-      studentId: resume.studentId
-    });
-
     // Update student profile with extracted skills
     if (extractedData.skills && extractedData.skills.length > 0) {
       const existingSkills = profile.skills || [];
       const newSkills = [...new Set([...existingSkills, ...extractedData.skills])];
-      await StudentProfile.update(
-        { skills: newSkills },
-        { where: { id: profile.id } }
-      );
+      await StudentProfile.findByIdAndUpdate(profile._id, { skills: newSkills });
     }
 
-    // Return the resume as a plain object to ensure all fields are serialized
-    const resumeData = resume.toJSON();
-    // Add _id alias for frontend compatibility (MongoDB -> PostgreSQL migration)
-    resumeData._id = resumeData.id;
-    console.log('Returning resume data with id:', resumeData.id);
-    response.status(201).json(resumeData);
-  } catch (error) { 
-    console.error('Upload resume error:', error);
-    next(error); 
-  }
+    response.status(201).json(resume);
+  } catch (error) { next(error); }
 }
 
 export async function updateResume(request, response, next) {
   try {
-    const profile = await getProfile(request.user.id);
+    const profile = await getProfile(request.user._id);
     if (!profile) return response.status(404).json({ message: 'Profile not found.' });
 
-    const allowed = ['fileName', 'summary', 'extractedSkills', 'education', 'projects', 
-                     'certifications', 'experience', 'achievements', 'interests'];
-    const updates = {};
-    allowed.forEach((key) => { if (request.body[key] !== undefined) updates[key] = request.body[key]; });
+    const allowed = [
+      'personalInfo', 'summary', 'extractedSkills', 'education',
+      'experience', 'projects', 'certifications', 'achievements',
+      'interests', 'preferredRole', 'preferredLocation'
+    ];
 
-    const [updated] = await Resume.update(updates, {
-      where: {
-        id: request.params.id,
-        studentId: profile.id
-      }
+    const updates = {};
+    allowed.forEach((key) => {
+      if (request.body[key] !== undefined) updates[key] = request.body[key];
     });
 
-    if (!updated) return response.status(404).json({ message: 'Resume not found.' });
-    
-    const resume = await Resume.findByPk(request.params.id);
+    const resume = await Resume.findOneAndUpdate(
+      { _id: request.params.id, studentId: profile._id },
+      { $set: updates },
+      { new: true, runValidators: true }
+    );
+
+    if (!resume) return response.status(404).json({ message: 'Resume not found.' });
+
+    // Update student profile with updated skills
+    if (updates.extractedSkills) {
+      const existingProfileSkills = profile.skills || [];
+      const mergedSkills = [...new Set([...existingProfileSkills, ...updates.extractedSkills])];
+      await StudentProfile.findByIdAndUpdate(profile._id, { skills: mergedSkills });
+    }
+
     response.json(resume);
-  } catch (error) { 
-    console.error('Update resume error:', error);
-    next(error); 
-  }
+  } catch (error) { next(error); }
 }
 
 export async function deleteResume(request, response, next) {
   try {
-    const profile = await getProfile(request.user.id);
+    const profile = await getProfile(request.user._id);
     if (!profile) return response.status(404).json({ message: 'Profile not found.' });
 
-    const deleted = await Resume.destroy({
-      where: {
-        id: request.params.id,
-        studentId: profile.id
+    const resume = await Resume.findOneAndDelete({ _id: request.params.id, studentId: profile._id });
+    if (!resume) return response.status(404).json({ message: 'Resume not found.' });
+
+    // Delete physical file if exists
+    if (resume.filePath) {
+      try {
+        const fs = (await import('fs')).default;
+        const path = (await import('path')).default;
+        const filePath = path.resolve(resume.filePath);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      } catch (fileError) {
+        console.warn('[File Delete] Error:', fileError.message);
       }
-    });
-    if (!deleted) return response.status(404).json({ message: 'Resume not found.' });
-    
-    response.json({ message: 'Resume deleted successfully.' });
-  } catch (error) { 
-    console.error('Delete resume error:', error);
-    next(error); 
-  }
+    }
+
+    response.json({ message: 'Resume deleted.' });
+  } catch (error) { next(error); }
 }
 
 export async function generateAIResume(request, response, next) {
   try {
-    const profile = await getProfile(request.user.id);
+    const profile = await getProfile(request.user._id);
     if (!profile) return response.status(404).json({ message: 'Profile not found.' });
 
     const {
@@ -511,13 +392,6 @@ export async function generateAIResume(request, response, next) {
       preferredRole,
       preferredLocation
     } = request.body;
-
-    console.log('Generate AI Resume - Received data:', {
-      personalInfo,
-      skills,
-      education: education?.length || 0,
-      experience: experience?.length || 0
-    });
 
     // Validate required fields
     if (!personalInfo || !personalInfo.name) {
@@ -563,7 +437,7 @@ export async function generateAIResume(request, response, next) {
 
     // Create resume with AI-generated or user-provided content
     const resume = await Resume.create({
-      studentId:          profile.id,
+      studentId:          profile._id,
       source:             'ai-generated',
       personalInfo:       personalInfo || {},
       summary:            generatedContent.summary || summary || '',
@@ -579,32 +453,17 @@ export async function generateAIResume(request, response, next) {
       aiAnalyzed:         true,
     });
 
-    console.log('Resume created with skills:', resume.extractedSkills);
-
     // Update student profile with skills
     if (skills && skills.length > 0) {
       const existingSkills = profile.skills || [];
       const newSkills = [...new Set([...existingSkills, ...skills])];
-      console.log('Updating profile with skills:', newSkills);
-      await StudentProfile.update(
-        { skills: newSkills },
-        { where: { id: profile.id } }
-      );
+      await StudentProfile.findByIdAndUpdate(profile._id, { skills: newSkills });
     }
 
-    // Add _id alias for frontend compatibility
-    const resumeData = resume.toJSON();
-    resumeData._id = resumeData.id;
-
-    console.log('Returning resume with extractedSkills:', resumeData.extractedSkills);
-
     response.status(201).json({
-      resume: resumeData,
+      resume,
       generatedContent: generatedContent.formattedSections,
       suggestions: generatedContent.suggestions
     });
-  } catch (error) { 
-    console.error('Generate AI resume error:', error);
-    next(error); 
-  }
+  } catch (error) { next(error); }
 }

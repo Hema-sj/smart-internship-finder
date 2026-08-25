@@ -1,56 +1,150 @@
-import mongoose from 'mongoose';
-import { CERTIFICATE_TYPES } from '../constants/certificates.js';
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/database.js';
 
-const internshipSchema = new mongoose.Schema({
-  companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true, index: true },
-  title: { type: String, required: true, trim: true },
-  courseRole: { type: String, required: true, trim: true, index: true },
-  startingDate: { type: Date, required: true, index: true },
-  applicationDeadline: { type: Date, required: true },
-  duration: { type: String, required: true, trim: true },
-  location: { type: String, required: true, trim: true, index: true },
-  mode: { type: String, enum: ['Remote', 'On-site', 'Hybrid'], required: true },
-  compensationType: { 
-    type: String, 
-    enum: ['Paid', 'Unpaid', 'Stipend Not Disclosed'], 
-    required: true, 
-    index: true 
+const Internship = sequelize.define('Internship', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true,
   },
-  stipend: { type: Number, min: 0, default: 0 },
+  companyId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    references: {
+      model: 'companies',
+      key: 'id',
+    },
+    onDelete: 'CASCADE',
+  },
+  title: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  courseRole: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  startingDate: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  applicationDeadline: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  duration: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  location: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  mode: {
+    type: DataTypes.ENUM('Remote', 'On-site', 'Hybrid'),
+    allowNull: false,
+  },
+  compensationType: {
+    type: DataTypes.ENUM('Paid', 'Unpaid', 'Not Disclosed'),
+    allowNull: false,
+    defaultValue: 'Not Disclosed',
+  },
+  stipend: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+  },
   certificateType: {
-    type: String,
-    enum: ['Hard Copy', 'Soft Copy', 'Both', 'No Certificate', 'Not Disclosed'],
-    required: true,
-    index: true,
+    type: DataTypes.ENUM('Hard Copy', 'Soft Copy', 'Both', 'Not Provided', 'Not Disclosed'),
+    defaultValue: 'Not Disclosed',
   },
-  requiredSkills: [{ type: String, trim: true }],
-  description: { type: String, required: true, trim: true },
-  companyWebsite: { type: String, trim: true },
-  internshipDetailsUrl: { type: String, required: true, trim: true },
-  applicationUrl: { type: String, required: true, trim: true },
-  status: { 
-    type: String, 
-    enum: ['Pending', 'Approved', 'Rejected', 'Disabled'], 
-    default: 'Pending', 
-    index: true 
+  certificateProvided: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
   },
-  aiMatch: { type: Number, min: 0, max: 100, default: 0 },
-}, { timestamps: true });
-
-// Validation: stipend required only when compensationType is "Paid"
-internshipSchema.pre('validate', function(next) {
-  if (this.compensationType === 'Paid' && (this.stipend === undefined || this.stipend === null)) {
-    return next(new Error('Stipend is required when compensationType is "Paid"'));
-  }
-  next();
+  certificateDetails: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  certificateConditions: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  requiredSkills: {
+    type: DataTypes.ARRAY(DataTypes.STRING),
+    defaultValue: [],
+  },
+  description: {
+    type: DataTypes.TEXT,
+    allowNull: false,
+  },
+  companyWebsite: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  internshipDetailsUrl: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  applicationUrl: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  isVerified: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  sourceName: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  sourceUrl: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  sourceVerified: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  lastVerifiedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  status: {
+    type: DataTypes.ENUM('Pending', 'Approved', 'Rejected', 'Disabled', 'Closed'),
+    defaultValue: 'Pending',
+  },
+  aiMatch: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    validate: {
+      min: 0,
+      max: 100,
+    },
+  },
+  companyRating: {
+    type: DataTypes.DECIMAL(2, 1),
+    allowNull: true,
+    validate: {
+      min: 0,
+      max: 5,
+    },
+  },
+  applicationStatus: {
+    type: DataTypes.ENUM('Open', 'Closed', 'Applications Full', 'Not Started'),
+    defaultValue: 'Open',
+  },
+}, {
+  tableName: 'internships',
+  timestamps: true,
+  indexes: [
+    { fields: ['companyId'] },
+    { fields: ['location'] },
+    { fields: ['courseRole'] },
+    { fields: ['compensationType'] },
+    { fields: ['certificateType'] },
+    { fields: ['status'] },
+    { fields: ['startingDate'] },
+  ],
 });
 
-// Text search index
-internshipSchema.index({ title: 'text', description: 'text', courseRole: 'text' });
-
-// Compound indexes for common queries
-internshipSchema.index({ status: 1, startingDate: 1 });
-internshipSchema.index({ status: 1, aiMatch: -1, createdAt: -1 });
-internshipSchema.index({ companyId: 1, status: 1 });
-
-export default mongoose.model('Internship', internshipSchema);
+export default Internship;

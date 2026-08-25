@@ -5,7 +5,7 @@ import { createToken } from '../utils/token.js';
 
 // ─── Helper: cookie + JSON response ──────────────────────────────────────────
 async function sendAuth(response, user, extra = {}) {
-  const token = createToken(user._id);
+  const token = createToken(user.id);
   response.cookie('accessToken', token, {
     httpOnly: true,
     sameSite: 'lax',
@@ -14,7 +14,7 @@ async function sendAuth(response, user, extra = {}) {
   });
   response.status(200).json({
     token,
-    user: { id: user._id, name: user.name, email: user.email, role: user.role },
+    user: { id: user.id, name: user.name, email: user.email, role: user.role },
     ...extra,
   });
 }
@@ -25,13 +25,19 @@ export async function register(request, response, next) {
     const { name, email, password } = request.body;
     if (!name || !email || !password)
       return response.status(400).json({ message: 'Name, email, and password are required.' });
-    if (await User.exists({ email: email.toLowerCase() }))
+    
+    // Check if user exists (Sequelize)
+    const existingUser = await User.findOne({ where: { email: email.toLowerCase() } });
+    if (existingUser)
       return response.status(409).json({ message: 'An account with this email already exists.' });
 
-    const user    = await User.create({ name, email, password, role: 'student' });
-    const profile = await StudentProfile.create({ userId: user._id });
+    const user = await User.create({ name, email: email.toLowerCase(), password, role: 'student' });
+    const profile = await StudentProfile.create({ userId: user.id });
     sendAuth(response, user, { studentProfile: profile });
-  } catch (error) { next(error); }
+  } catch (error) { 
+    console.error('Registration error:', error);
+    next(error); 
+  }
 }
 
 // ─── Company registration ──────────────────────────────────────────────────────
@@ -40,12 +46,15 @@ export async function registerCompany(request, response, next) {
     const { name, email, password, companyName, website, industry, logo } = request.body;
     if (!name || !email || !password || !companyName || !industry)
       return response.status(400).json({ message: 'name, email, password, companyName, and industry are required.' });
-    if (await User.exists({ email: email.toLowerCase() }))
+    
+    // Check if user exists (Sequelize)
+    const existingUser = await User.findOne({ where: { email: email.toLowerCase() } });
+    if (existingUser)
       return response.status(409).json({ message: 'An account with this email already exists.' });
 
-    const user    = await User.create({ name, email, password, role: 'company' });
+    const user = await User.create({ name, email: email.toLowerCase(), password, role: 'company' });
     const company = await Company.create({
-      userId:          user._id,
+      userId:          user.id,
       companyName:     companyName,
       website:         website     || '',
       industry:        industry,
@@ -57,10 +66,13 @@ export async function registerCompany(request, response, next) {
     // Do NOT send auth token - company must wait for admin verification
     response.status(201).json({
       message: 'Company registration successful. Your account is pending admin verification.',
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
-      company: { id: company._id, companyName: company.companyName, verified_status: company.verified_status }
+      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      company: { id: company.id, companyName: company.companyName, verified_status: company.verified_status }
     });
-  } catch (error) { next(error); }
+  } catch (error) { 
+    console.error('Company registration error:', error);
+    next(error); 
+  }
 }
 
 // ─── Login ────────────────────────────────────────────────────────────────────
@@ -70,7 +82,7 @@ async function loginAs(request, response, next, role) {
     if (!email || !password)
       return response.status(400).json({ message: 'Email and password are required.' });
 
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    const user = await User.findOne({ where: { email: email.toLowerCase() } });
     if (!user || !(await user.comparePassword(password)))
       return response.status(401).json({ message: 'Email or password is incorrect.' });
     if (user.role !== role)
@@ -78,9 +90,9 @@ async function loginAs(request, response, next, role) {
 
     let extra = {};
     if (role === 'student') {
-      extra.studentProfile = await StudentProfile.findOne({ userId: user._id }).populate('skills', 'name');
+      extra.studentProfile = await StudentProfile.findOne({ where: { userId: user.id } });
     } else if (role === 'company') {
-      const company = await Company.findOne({ userId: user._id });
+      const company = await Company.findOne({ where: { userId: user.id } });
       
       // Reject login if company not yet verified by admin
       if (!company || company.verified_status !== 'approved') {
@@ -93,7 +105,10 @@ async function loginAs(request, response, next, role) {
     }
 
     sendAuth(response, user, extra);
-  } catch (error) { next(error); }
+  } catch (error) { 
+    console.error('Login error:', error);
+    next(error); 
+  }
 }
 
 export const login        = (req, res, next) => loginAs(req, res, next, 'student');
@@ -106,15 +121,18 @@ export async function getCurrentUser(request, response, next) {
     const user = request.user;
     let extra  = {};
     if (user.role === 'student') {
-      extra.studentProfile = await StudentProfile.findOne({ userId: user._id }).populate('skills', 'name');
+      extra.studentProfile = await StudentProfile.findOne({ where: { userId: user.id } });
     } else if (user.role === 'company') {
-      extra.company = await Company.findOne({ userId: user._id });
+      extra.company = await Company.findOne({ where: { userId: user.id } });
     }
     response.json({
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+      user: { id: user.id, name: user.name, email: user.email, role: user.role },
       ...extra,
     });
-  } catch (error) { next(error); }
+  } catch (error) { 
+    console.error('Get current user error:', error);
+    next(error); 
+  }
 }
 
 // ─── Logout ───────────────────────────────────────────────────────────────────

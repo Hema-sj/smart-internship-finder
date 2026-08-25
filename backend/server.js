@@ -6,7 +6,7 @@ import rateLimit from 'express-rate-limit';
 import { fileURLToPath } from 'url';
 import { join, dirname } from 'path';
 
-import connectDatabase    from './config/database.js';
+import { connectDatabase } from './config/database.js';
 import healthRouter       from './routes/healthRoutes.js';
 import authRouter         from './routes/authRoutes.js';
 import internshipRouter   from './routes/internshipRoutes.js';

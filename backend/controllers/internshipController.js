@@ -5,6 +5,7 @@
 import Internship from '../models/Internship.js';
 import Company from '../models/Company.js';
 import StudentProfile from '../models/StudentProfile.js';
+import { enhanceInternshipForDisplay } from '../utils/internshipFormatters.js';
 
 /**
  * Calculate match score based on required skills overlap
@@ -85,8 +86,39 @@ export async function getInternships(request, response, next) {
       filter.compensationType = request.query.compensationType;
     }
     
-    if (request.query.certificateType) {
-      filter.certificateType = request.query.certificateType;
+    if (request.query.certificateType || request.query.certificate) {
+      const certType = request.query.certificateType || request.query.certificate;
+      filter.certificateType = certType;
+    }
+    
+    if (request.query.mode) {
+      filter.mode = request.query.mode;
+    }
+    
+    if (request.query.duration) {
+      filter.duration = new RegExp(request.query.duration, 'i');
+    }
+    
+    // Compensation range filter
+    if (request.query.compensationRange) {
+      const range = request.query.compensationRange;
+      if (range === 'Paid') {
+        filter.compensationType = 'Paid';
+      } else if (range === 'Unpaid') {
+        filter.compensationType = 'Unpaid';
+      } else if (range === '0-5000') {
+        filter.compensationType = 'Paid';
+        filter.stipend = { $gte: 0, $lte: 5000 };
+      } else if (range === '5000-10000') {
+        filter.compensationType = 'Paid';
+        filter.stipend = { $gte: 5000, $lte: 10000 };
+      } else if (range === '10000-20000') {
+        filter.compensationType = 'Paid';
+        filter.stipend = { $gte: 10000, $lte: 20000 };
+      } else if (range === '20000+') {
+        filter.compensationType = 'Paid';
+        filter.stipend = { $gte: 20000 };
+      }
     }
     
     // Starting date range
@@ -103,7 +135,7 @@ export async function getInternships(request, response, next) {
     // ─── Sorting ──────────────────────────────────────────────────────────────
     let sort = { createdAt: -1 }; // default: newest
     
-    const sortBy = request.query.sortBy || 'newest';
+    const sortBy = request.query.sortBy || request.query.sort || 'newest';
     
     switch (sortBy) {
       case 'bestMatch':
@@ -119,6 +151,15 @@ export async function getInternships(request, response, next) {
         break;
       case 'highestStipend':
         sort = { stipend: -1, createdAt: -1 };
+        break;
+      case 'deadline':
+        sort = { applicationDeadline: 1, createdAt: -1 };
+        break;
+      case 'highestAIMatch':
+        sort = { aiMatch: -1, createdAt: -1 };
+        break;
+      case 'highestRating':
+        sort = { companyRating: -1, createdAt: -1 };
         break;
       default:
         sort = { createdAt: -1 };
@@ -144,20 +185,19 @@ export async function getInternships(request, response, next) {
             request.user._id,
             internship.requiredSkills
           );
-          return {
+          const enhanced = enhanceInternshipForDisplay({
             ...internship,
             matchScore,
-            companyName: internship.companyId?.companyName || 'Unknown Company',
             internshipId: internship._id
-          };
+          });
+          return enhanced;
         })
       );
     } else {
       // For non-authenticated users, just format the response
-      data = internships.map(internship => ({
+      data = internships.map(internship => enhanceInternshipForDisplay({
         ...internship,
         matchScore: null,
-        companyName: internship.companyId?.companyName || 'Unknown Company',
         internshipId: internship._id
       }));
     }
@@ -209,12 +249,14 @@ export async function getInternshipById(request, response, next) {
       );
     }
     
-    response.json({
+    // Enhance internship with formatted display values
+    const enhanced = enhanceInternshipForDisplay({
       ...internship,
       matchScore,
-      companyName: internship.companyId?.companyName || 'Unknown Company',
       internshipId: internship._id
     });
+    
+    response.json(enhanced);
   } catch (error) {
     next(error);
   }

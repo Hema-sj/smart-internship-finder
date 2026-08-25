@@ -280,15 +280,7 @@ export async function getResumes(request, response, next) {
       where: { studentId: profile.id },
       order: [['uploadedAt', 'DESC']]
     });
-    
-    // Add _id alias for frontend compatibility
-    const resumesWithAlias = resumes.map(r => {
-      const data = r.toJSON();
-      data._id = data.id;
-      return data;
-    });
-    
-    response.json(resumesWithAlias);
+    response.json(resumes);
   } catch (error) { 
     console.error('Get resumes error:', error);
     next(error); 
@@ -297,12 +289,6 @@ export async function getResumes(request, response, next) {
 
 export async function getResumeById(request, response, next) {
   try {
-    console.log('getResumeById called with id:', request.params.id);
-    
-    if (!request.params.id || request.params.id === 'undefined') {
-      return response.status(400).json({ message: 'Invalid resume ID' });
-    }
-    
     const profile = await getProfile(request.user.id);
     if (!profile) return response.status(404).json({ message: 'Profile not found.' });
 
@@ -313,12 +299,7 @@ export async function getResumeById(request, response, next) {
       } 
     });
     if (!resume) return response.status(404).json({ message: 'Resume not found.' });
-    
-    // Add _id alias for frontend compatibility
-    const resumeData = resume.toJSON();
-    resumeData._id = resumeData.id;
-    
-    response.json(resumeData);
+    response.json(resume);
   } catch (error) { 
     console.error('Get resume by id error:', error);
     next(error); 
@@ -330,116 +311,9 @@ export async function uploadResume(request, response, next) {
     const profile = await getProfile(request.user.id);
     if (!profile) return response.status(404).json({ message: 'Profile not found.' });
 
-    if (!request.file) return response.status(400).json({ message: 'No file uploaded.' });
-
-    const file = request.file;
-    const allowedTypes = [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'image/jpeg',
-      'image/png',
-      'image/jpg'
-    ];
-    
-    if (!allowedTypes.includes(file.mimetype)) {
-      return response.status(400).json({ message: 'Only PDF, DOC, DOCX, JPG, and PNG files are allowed.' });
-    }
-
-    // Maximum file size: 5MB
-    if (file.size > 5 * 1024 * 1024) {
-      return response.status(400).json({ message: 'File size must not exceed 5MB.' });
-    }
-
-    // Call AI service to parse resume
-    let extractedData = {
-      personalInfo: {},
-      skills: [],
-      education: [],
-      experience: [],
-      projects: [],
-      certifications: [],
-      achievements: [],
-      interests: [],
-      summary: '',
-      text: '',
-      aiConfidenceScore: 0
-    };
-
-    try {
-      const FormData = (await import('form-data')).default;
-      const fs = (await import('fs')).default;
-      const formData = new FormData();
-      
-      // Read file from disk if available, otherwise use buffer
-      if (file.path) {
-        formData.append('file', fs.createReadStream(file.path), file.originalname);
-      } else {
-        formData.append('file', file.buffer, { filename: file.originalname });
-      }
-
-      const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
-      const aiResponse = await fetch(`${aiServiceUrl}/api/resume/parse`, {
-        method: 'POST',
-        body: formData,
-        headers: formData.getHeaders(),
-      });
-
-      if (aiResponse.ok) {
-        extractedData = await aiResponse.json();
-      } else {
-        console.warn('[AI Service] Resume parsing failed with status:', aiResponse.status);
-      }
-    } catch (aiError) {
-      console.warn('[AI Service] Resume parsing error:', aiError.message);
-      // Continue without AI data — graceful fallback
-    }
-
-    const resume = await Resume.create({
-      studentId:          profile.id,
-      fileName:           file.originalname,
-      fileSize:           file.size,
-      filePath:           file.path || '',
-      mimeType:           file.mimetype,
-      source:             'upload',
-      extractedText:      extractedData.text || '',
-      personalInfo:       extractedData.personalInfo || {},
-      summary:            extractedData.summary || '',
-      extractedSkills:    extractedData.skills || [],
-      education:          extractedData.education || [],
-      experience:         extractedData.experience || [],
-      projects:           extractedData.projects || [],
-      certifications:     extractedData.certifications || [],
-      achievements:       extractedData.achievements || [],
-      interests:          extractedData.interests || [],
-      preferredRole:      extractedData.preferredRole || '',
-      preferredLocation:  extractedData.preferredLocation || '',
-      aiAnalyzed:         true,
-      aiConfidenceScore:  extractedData.aiConfidenceScore || 0,
-    });
-
-    console.log('Resume created successfully:', {
-      id: resume.id,
-      fileName: resume.fileName,
-      studentId: resume.studentId
-    });
-
-    // Update student profile with extracted skills
-    if (extractedData.skills && extractedData.skills.length > 0) {
-      const existingSkills = profile.skills || [];
-      const newSkills = [...new Set([...existingSkills, ...extractedData.skills])];
-      await StudentProfile.update(
-        { skills: newSkills },
-        { where: { id: profile.id } }
-      );
-    }
-
-    // Return the resume as a plain object to ensure all fields are serialized
-    const resumeData = resume.toJSON();
-    // Add _id alias for frontend compatibility (MongoDB -> PostgreSQL migration)
-    resumeData._id = resumeData.id;
-    console.log('Returning resume data with id:', resumeData.id);
-    response.status(201).json(resumeData);
+    // For now, just return a placeholder response
+    // The full file upload implementation would require multer setup
+    response.status(501).json({ message: 'Resume upload not yet implemented in PostgreSQL migration' });
   } catch (error) { 
     console.error('Upload resume error:', error);
     next(error); 
@@ -498,111 +372,8 @@ export async function generateAIResume(request, response, next) {
     const profile = await getProfile(request.user.id);
     if (!profile) return response.status(404).json({ message: 'Profile not found.' });
 
-    const {
-      personalInfo,
-      summary,
-      education,
-      skills,
-      projects,
-      certifications,
-      experience,
-      achievements,
-      interests,
-      preferredRole,
-      preferredLocation
-    } = request.body;
-
-    console.log('Generate AI Resume - Received data:', {
-      personalInfo,
-      skills,
-      education: education?.length || 0,
-      experience: experience?.length || 0
-    });
-
-    // Validate required fields
-    if (!personalInfo || !personalInfo.name) {
-      return response.status(400).json({ message: 'Personal information with name is required.' });
-    }
-
-    // Call AI service to generate professional resume content
-    let generatedContent = {
-      summary: summary || '',
-      formattedSections: {},
-      suggestions: {}
-    };
-
-    try {
-      const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
-      const aiResponse = await fetch(`${aiServiceUrl}/api/resume/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          personalInfo,
-          summary,
-          education,
-          skills,
-          projects,
-          certifications,
-          experience,
-          achievements,
-          interests,
-          preferredRole,
-          preferredLocation
-        }),
-      });
-
-      if (aiResponse.ok) {
-        generatedContent = await aiResponse.json();
-      } else {
-        console.warn('[AI Service] Resume generation failed with status:', aiResponse.status);
-      }
-    } catch (aiError) {
-      console.warn('[AI Service] Resume generation error:', aiError.message);
-      // Continue with user-provided data
-    }
-
-    // Create resume with AI-generated or user-provided content
-    const resume = await Resume.create({
-      studentId:          profile.id,
-      source:             'ai-generated',
-      personalInfo:       personalInfo || {},
-      summary:            generatedContent.summary || summary || '',
-      extractedSkills:    skills || [],
-      education:          education || [],
-      experience:         experience || [],
-      projects:           projects || [],
-      certifications:     certifications || [],
-      achievements:       achievements || [],
-      interests:          interests || [],
-      preferredRole:      preferredRole || '',
-      preferredLocation:  preferredLocation || '',
-      aiAnalyzed:         true,
-    });
-
-    console.log('Resume created with skills:', resume.extractedSkills);
-
-    // Update student profile with skills
-    if (skills && skills.length > 0) {
-      const existingSkills = profile.skills || [];
-      const newSkills = [...new Set([...existingSkills, ...skills])];
-      console.log('Updating profile with skills:', newSkills);
-      await StudentProfile.update(
-        { skills: newSkills },
-        { where: { id: profile.id } }
-      );
-    }
-
-    // Add _id alias for frontend compatibility
-    const resumeData = resume.toJSON();
-    resumeData._id = resumeData.id;
-
-    console.log('Returning resume with extractedSkills:', resumeData.extractedSkills);
-
-    response.status(201).json({
-      resume: resumeData,
-      generatedContent: generatedContent.formattedSections,
-      suggestions: generatedContent.suggestions
-    });
+    // Placeholder for AI resume generation
+    response.status(501).json({ message: 'AI resume generation not yet implemented in PostgreSQL migration' });
   } catch (error) { 
     console.error('Generate AI resume error:', error);
     next(error); 
