@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 
 import CompensationBadge from './CompensationBadge';
+import CertificateBadge from './CertificateBadge';
 import { getCompensationSummary } from '../utils/compensation';
 
 function InfoRow({ icon: Icon, label, value }) {
@@ -179,6 +180,49 @@ export default function InternshipDetailModal({ internship, onClose }) {
                   </div>
                 </>
               )}
+
+              {/* Certificate Information */}
+              <div className="mt-4 pt-4 border-t border-slate-100">
+                <h3 className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-400">Certificate Information</h3>
+                
+                {internship.certificateProvided === true ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-emerald-600" />
+                      <span className="text-sm font-semibold text-emerald-700">Certificate Provided</span>
+                    </div>
+                    
+                    <div>
+                      <p className="text-xs text-slate-500 mb-1">Type:</p>
+                      <CertificateBadge certificateType={internship.certificateType} size="md" />
+                    </div>
+                    
+                    {internship.certificateDetails && (
+                      <div className="rounded-lg bg-slate-50 p-3">
+                        <p className="text-xs text-slate-500 mb-1">Details:</p>
+                        <p className="text-sm text-slate-700">{internship.certificateDetails}</p>
+                      </div>
+                    )}
+                    
+                    {internship.certificateConditions && (
+                      <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
+                        <p className="text-xs text-amber-700 font-semibold mb-1">Conditions:</p>
+                        <p className="text-sm text-amber-900">{internship.certificateConditions}</p>
+                      </div>
+                    )}
+                  </div>
+                ) : internship.certificateProvided === false || internship.certificateType === 'Not Provided' ? (
+                  <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 p-3">
+                    <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
+                    <span className="text-sm text-red-700">Certificate not provided for this internship</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 rounded-lg bg-slate-50 border border-slate-200 p-3">
+                    <AlertCircle className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                    <span className="text-sm text-slate-600">Certificate information not disclosed</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

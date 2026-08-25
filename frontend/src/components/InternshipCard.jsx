@@ -1,4 +1,4 @@
-import { MapPin, Calendar, Sparkles, Award, BookOpen } from 'lucide-react';
+import { MapPin, Calendar, Sparkles, Award, BookOpen, ExternalLink } from 'lucide-react';
 import CompensationBadge from './CompensationBadge';
 import { getCompensationSummary } from '../utils/compensation';
 
@@ -57,12 +57,26 @@ export default function InternshipCard({ internship, onViewDetails }) {
         <span className="flex items-center gap-1 text-xs font-bold text-emerald-700">
           <Sparkles size={11} />{internship.aiMatch}% AI Match
         </span>
-        <button
-          onClick={() => onViewDetails(internship)}
-          className="rounded-lg bg-emerald-700 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-800 active:scale-95"
-        >
-          View Details
-        </button>
+        <div className="flex gap-2">
+          {internship.applicationUrl && (
+            <a
+              href={internship.applicationUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="rounded-lg bg-emerald-700 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-800 active:scale-95"
+              title="Apply on official company website"
+            >
+              Apply Now
+            </a>
+          )}
+          <button
+            onClick={() => onViewDetails(internship)}
+            className="rounded-lg border border-emerald-700 text-emerald-700 px-3.5 py-1.5 text-xs font-bold transition hover:bg-emerald-50 active:scale-95"
+          >
+            View Details
+          </button>
+        </div>
       </div>
     </article>
   );

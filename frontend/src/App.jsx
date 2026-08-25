@@ -22,6 +22,7 @@ import CompanyLoginPage        from './pages/CompanyLoginPage';
 import CompanyRegisterPage     from './pages/CompanyRegisterPage';
 import AdminLoginPage          from './pages/AdminLoginPage';
 import NotFoundPage            from './pages/NotFoundPage';
+import LinksPage               from './pages/LinksPage';
 
 // Student dashboard pages
 import StudentDashboardPage    from './pages/StudentDashboardPage';
@@ -58,6 +59,7 @@ export default function App() {
         {/* ── Public pages (top navbar) ── */}
         <Route element={<AppLayout />}>
           <Route path="/"               element={<HomePage />} />
+          <Route path="/links"          element={<LinksPage />} />
           <Route path="/internships"    element={<InternshipListPage />} />
           <Route path="/internships/:id" element={<InternshipDetailPage />} />
           <Route path="/locations"      element={<Locations />} />

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ExternalLink, CheckCircle, AlertCircle } from 'lucide-react';
+import CertificateBadge from './CertificateBadge';
 
 /**
  * InternshipTable - Displays internships in tabular format with 15 columns
@@ -211,8 +212,11 @@ export default function InternshipTable({
                   </td>
 
                   {/* Column 10: Certificate */}
-                  <td className="px-4 py-4 text-sm text-slate-700 whitespace-nowrap">
-                    {internship.displayCertificate}
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <CertificateBadge 
+                      certificateType={internship.certificateType || internship.displayCertificate} 
+                      size="sm"
+                    />
                   </td>
 
                   {/* Column 11: Required Skills */}
