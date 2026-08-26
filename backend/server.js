@@ -30,6 +30,7 @@ const allowedOrigins = [
   'http://localhost:5174',
   'http://localhost:5175',
   'http://localhost:5176',
+  'http://10.54.252.220:5173',  // Network host
 ];
 app.use(cors({
   origin: (origin, callback) => {
@@ -43,7 +44,7 @@ app.use(cors({
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 requests per window
+  max: 50, // 50 requests per window (increased from 5 for development)
   message: 'Too many login/register attempts, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,

@@ -8,7 +8,7 @@ import {
   getMyApplications, applyToInternship, withdrawApplication,
   getSaved, saveInternship, unsaveInternship,
   getNotifications, markNotificationRead, markAllNotificationsRead,
-  getResumes, getResumeById, uploadResume, updateResume, deleteResume, generateAIResume,
+  getResumes, getResumeById, uploadResume, updateResume, deleteResume, generateAIResume, getResumeSWOT,
 } from '../controllers/studentController.js';
 
 const router = Router();
@@ -63,11 +63,12 @@ router.patch('/me/notifications/read-all',    markAllNotificationsRead);
 router.patch('/me/notifications/:id/read',    markNotificationRead);
 
 // Resumes
-router.get('/me/resumes',           getResumes);
-router.get('/me/resumes/:id',       getResumeById);
-router.post('/me/resumes/upload',   upload.single('file'), uploadResume);
-router.put('/me/resumes/:id',       updateResume);
-router.delete('/me/resumes/:id',    deleteResume);
-router.post('/me/resumes/generate', generateAIResume);
+router.get('/me/resumes',             getResumes);
+router.get('/me/resumes/:id',         getResumeById);
+router.get('/me/resumes/:id/swot',    getResumeSWOT);
+router.post('/me/resumes/upload',     upload.single('file'), uploadResume);
+router.put('/me/resumes/:id',         updateResume);
+router.delete('/me/resumes/:id',      deleteResume);
+router.post('/me/resumes/generate',   generateAIResume);
 
 export default router;

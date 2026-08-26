@@ -2,13 +2,15 @@
  * Student controller — all endpoints are scoped to the authenticated student.
  * Students can only access their own data (profile, applications, saved, notifications, resumes).
  */
-import StudentProfile  from '../models/StudentProfile.js';
-import Application     from '../models/Application.js';
-import SavedInternship from '../models/SavedInternship.js';
-import Notification    from '../models/Notification.js';
-import Resume          from '../models/Resume.js';
-import Internship      from '../models/Internship.js';
-import Company         from '../models/Company.js';
+import { 
+  StudentProfile, 
+  Application, 
+  SavedInternship, 
+  Notification, 
+  Resume, 
+  Internship, 
+  Company 
+} from '../models/index.js';
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
 async function getProfile(userId) {
@@ -490,6 +492,80 @@ export async function deleteResume(request, response, next) {
   } catch (error) { 
     console.error('Delete resume error:', error);
     next(error); 
+  }
+}
+
+export async function getResumeSWOT(request, response, next) {
+  try {
+    const profile = await getProfile(request.user.id);
+    if (!profile) return response.status(404).json({ message: 'Profile not found.' });
+
+    const resume = await Resume.findOne({
+      where: {
+        id: request.params.id,
+        studentId: profile.id
+      }
+    });
+    
+    if (!resume) return response.status(404).json({ message: 'Resume not found.' });
+
+    // Check if SWOT analysis already exists in resume
+    if (resume.swotAnalysis) {
+      return response.json(resume.swotAnalysis);
+    }
+
+    // Call AI service to generate SWOT analysis
+    try {
+      const resumeData = {
+        skills: resume.extractedSkills || [],
+        education: resume.education || [],
+        experience: resume.experience || [],
+        projects: resume.projects || [],
+        certifications: resume.certifications || [],
+        achievements: resume.achievements || [],
+        summary: resume.summary || ''
+      };
+
+      const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+      const aiResponse = await fetch(`${aiServiceUrl}/api/resume/swot-from-data`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          personalInfo: resume.personalInfo || {},
+          summary: resume.summary || '',
+          education: resume.education || [],
+          skills: resume.extractedSkills || [],
+          projects: resume.projects || [],
+          certifications: resume.certifications || [],
+          experience: resume.experience || [],
+          achievements: resume.achievements || [],
+          interests: resume.interests || [],
+          preferredRole: resume.preferredRole || '',
+          preferredLocation: resume.preferredLocation || ''
+        }),
+      });
+
+      if (aiResponse.ok) {
+        const swotData = await aiResponse.json();
+        
+        // Save SWOT analysis to database
+        await Resume.update(
+          { swotAnalysis: swotData },
+          { where: { id: resume.id } }
+        );
+        
+        return response.json(swotData);
+      } else {
+        console.warn('[AI Service] SWOT analysis failed with status:', aiResponse.status);
+        return response.status(500).json({ message: 'Failed to generate SWOT analysis.' });
+      }
+    } catch (aiError) {
+      console.error('[AI Service] SWOT analysis error:', aiError.message);
+      return response.status(500).json({ message: 'AI service unavailable.' });
+    }
+  } catch (error) {
+    console.error('Get resume SWOT error:', error);
+    next(error);
   }
 }
 

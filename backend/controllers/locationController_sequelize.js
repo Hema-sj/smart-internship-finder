@@ -2,7 +2,8 @@
  * Location controller — location-based internship statistics
  */
 import { Op } from 'sequelize';
-import { Internship, Company } from '../models/index.js';
+import Internship from '../models/Internship.js';
+import Company from '../models/Company.js';
 
 /**
  * GET /api/locations - Get all locations with internship counts
@@ -180,47 +181,8 @@ export async function getLocationStats(request, response, next) {
   }
 }
 
-/**
- * GET /api/locations/company/:id - Get company profile
- */
-export async function getCompanyProfile(request, response, next) {
-  try {
-    const { id } = request.params;
-
-    const company = await Company.findByPk(id);
-
-    if (!company) {
-      return response.status(404).json({ message: 'Company not found' });
-    }
-
-    // Get company's internships
-    const internships = await Internship.findAll({
-      where: {
-        companyId: id,
-        status: 'Approved',
-        applicationStatus: 'Open'
-      }
-    });
-
-    const data = company.toJSON();
-    data._id = data.id;
-    data.internships = internships.map(i => {
-      const iData = i.toJSON();
-      iData._id = iData.id;
-      return iData;
-    });
-
-    response.json(data);
-
-  } catch (error) {
-    console.error('Get company profile error:', error);
-    next(error);
-  }
-}
-
 export default {
   getAllLocations,
   getLocationInternships,
-  getLocationStats,
-  getCompanyProfile
+  getLocationStats
 };

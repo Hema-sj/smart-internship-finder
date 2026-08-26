@@ -97,6 +97,12 @@ const Resume = sequelize.define('Resume', {
     }
   },
   
+  // SWOT Analysis - stored as JSONB
+  swotAnalysis: {
+    type: DataTypes.JSONB,
+    defaultValue: null
+  },
+  
   uploadedAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW

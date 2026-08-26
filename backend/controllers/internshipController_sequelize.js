@@ -3,7 +3,9 @@
  * PHASE 12: Real Internship Data & Search Integration
  */
 import { Op } from 'sequelize';
-import { Internship, Company, StudentProfile } from '../models/index.js';
+import Internship from '../models/Internship.js';
+import Company from '../models/Company.js';
+import StudentProfile from '../models/StudentProfile.js';
 
 /**
  * Calculate AI match score based on student skills vs internship requirements
@@ -125,16 +127,11 @@ export async function getInternships(request, response, next) {
     // Pagination
     const offset = (page - 1) * limit;
 
-    // Validate sort field - only allow valid columns
-    const validSortFields = ['startingDate', 'title', 'stipend', 'createdAt', 'applicationDeadline'];
-    const sortField = validSortFields.includes(sort) ? sort : 'startingDate';
-    const sortOrder = ['ASC', 'DESC'].includes(order.toUpperCase()) ? order.toUpperCase() : 'DESC';
-
     // Execute query
     const { count, rows: internships } = await Internship.findAndCountAll({
       where,
       include,
-      order: [[sortField, sortOrder]],
+      order: [[sort, order.toUpperCase()]],
       limit: parseInt(limit),
       offset: parseInt(offset),
       distinct: true
@@ -208,7 +205,7 @@ export async function getInternshipById(request, response, next) {
       include: [{
         model: Company,
         as: 'company',
-        attributes: ['id', 'companyName', 'logo', 'website', 'industry', 'description', 'careersUrl']
+        attributes: ['id', 'companyName', 'logo', 'website', 'industry', 'description']
       }]
     });
 
@@ -236,83 +233,6 @@ export async function getInternshipById(request, response, next) {
 
   } catch (error) {
     console.error('Get internship by ID error:', error);
-    next(error);
-  }
-}
-
-/**
- * GET /api/internships/:id/apply-link - Validate and get application link
- * This endpoint validates the internship status before returning the application URL
- */
-export async function getApplicationLink(request, response, next) {
-  try {
-    const { id } = request.params;
-
-    const internship = await Internship.findByPk(id, {
-      include: [{
-        model: Company,
-        as: 'company',
-        attributes: ['companyName', 'careersUrl']
-      }]
-    });
-
-    if (!internship) {
-      return response.status(404).json({ 
-        success: false,
-        message: 'Internship not found' 
-      });
-    }
-
-    // Validate internship is still accepting applications
-    const validation = {
-      isValid: true,
-      errors: []
-    };
-
-    if (internship.applicationStatus !== 'Open') {
-      validation.isValid = false;
-      validation.errors.push(`This internship is ${internship.applicationStatus.toLowerCase()}`);
-    }
-
-    if (internship.status !== 'Approved') {
-      validation.isValid = false;
-      validation.errors.push('This internship is not currently approved');
-    }
-
-    if (internship.applicationDeadline) {
-      const deadline = new Date(internship.applicationDeadline);
-      const now = new Date();
-      if (deadline < now) {
-        validation.isValid = false;
-        validation.errors.push('Application deadline has passed');
-      }
-    }
-
-    if (!internship.applicationUrl) {
-      validation.isValid = false;
-      validation.errors.push('Application link is not available for this internship');
-    }
-
-    if (!validation.isValid) {
-      return response.status(400).json({
-        success: false,
-        message: validation.errors[0],
-        errors: validation.errors,
-        fallbackUrl: internship.company?.careersUrl || internship.company?.website
-      });
-    }
-
-    // Return the application URL
-    response.json({
-      success: true,
-      applicationUrl: internship.applicationUrl,
-      companyName: internship.company?.companyName,
-      internshipTitle: internship.title,
-      message: 'You will be redirected to the official company application page'
-    });
-
-  } catch (error) {
-    console.error('Get application link error:', error);
     next(error);
   }
 }
@@ -364,6 +284,5 @@ export async function getLocationStats(request, response, next) {
 export default {
   getInternships,
   getInternshipById,
-  getLocationStats,
-  getApplicationLink
+  getLocationStats
 };

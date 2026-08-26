@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
+import { User } from '../models/index.js';
 
 export async function requireAuth(request, response, next) {
   const token = request.cookies.accessToken || request.headers.authorization?.replace('Bearer ', '');

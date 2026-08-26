@@ -1,6 +1,4 @@
-import User           from '../models/User.js';
-import StudentProfile  from '../models/StudentProfile.js';
-import Company         from '../models/Company.js';
+import { User, StudentProfile, Company } from '../models/index.js';
 import { createToken } from '../utils/token.js';
 
 // ─── Helper: cookie + JSON response ──────────────────────────────────────────
