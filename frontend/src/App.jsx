@@ -16,11 +16,13 @@ import InternshipDetailPage    from './pages/InternshipDetailPage';
 import Locations               from './pages/Locations';
 import LocationPage            from './pages/LocationPage';
 import CompanyProfilePage      from './pages/CompanyProfilePage';
+import CompanyLinksPage        from './pages/CompanyLinksPage';
 import LoginPage               from './pages/LoginPage';
 import RegisterPage            from './pages/RegisterPage';
 import CompanyLoginPage        from './pages/CompanyLoginPage';
 import CompanyRegisterPage     from './pages/CompanyRegisterPage';
 import AdminLoginPage          from './pages/AdminLoginPage';
+import LoginChoicePage         from './pages/LoginChoicePage';
 import NotFoundPage            from './pages/NotFoundPage';
 import LinksPage               from './pages/LinksPage';
 
@@ -59,8 +61,10 @@ export default function App() {
         {/* ── Public pages (top navbar) ── */}
         <Route element={<AppLayout />}>
           <Route path="/"               element={<HomePage />} />
+          <Route path="/auth"           element={<LoginChoicePage />} />
           <Route path="/links"          element={<LinksPage />} />
           <Route path="/internships"    element={<InternshipListPage />} />
+          <Route path="/company-links"  element={<CompanyLinksPage />} />
           <Route path="/internships/:id" element={<InternshipDetailPage />} />
           <Route path="/locations"      element={<Locations />} />
           <Route path="/locations/:location" element={<LocationPage />} />

@@ -41,9 +41,9 @@ export default function ResumeUploadPage() {
       clearInterval(progressInterval);
       setUploadProgress(100);
 
-      // Navigate to resumes list page after successful upload
+      // Redirect to analysis page to show match scores
       setTimeout(() => {
-        navigate('/dashboard/resume');
+        navigate(`/dashboard/resume/analysis/${result.id}`);
       }, 500);
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to upload resume');

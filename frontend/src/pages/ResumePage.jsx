@@ -82,17 +82,16 @@ function ResumeCard({ resume, onDelete, onView, onEdit }) {
       <div className="flex gap-2 mt-4 pt-4 border-t border-slate-100">
         <button
           onClick={() => onView(resume._id)}
-          className="flex-1 px-3 py-2 text-sm font-medium text-slate-700 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors flex items-center justify-center gap-2"
+          className="flex-1 px-3 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors flex items-center justify-center gap-2"
         >
-          <Eye className="w-4 h-4" />
-          Preview
+          <Brain className="w-4 h-4" />
+          View Analysis
         </button>
         <button
           onClick={() => onEdit(resume._id)}
-          className="flex-1 px-3 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors flex items-center justify-center gap-2"
+          className="px-3 py-2 text-sm font-medium text-slate-700 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
         >
           <Edit className="w-4 h-4" />
-          Edit
         </button>
         <button
           onClick={handleDelete}
@@ -135,11 +134,11 @@ export default function ResumePage() {
   };
 
   const handleView = (id) => {
-    navigate(`/dashboard/resume/preview/${id}`);
+    navigate(`/dashboard/resume/analysis/${id}`);
   };
 
   const handleEdit = (id) => {
-    navigate(`/dashboard/resume/analysis/${id}`);
+    navigate(`/dashboard/resume/preview/${id}`);
   };
 
   const handleUploadClick = () => {

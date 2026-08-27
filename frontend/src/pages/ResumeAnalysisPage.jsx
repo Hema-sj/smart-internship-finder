@@ -1,821 +1,434 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { getResumeById } from '../services/studentService';
+import { fetchInternships } from '../services/internshipService';
 import { 
-  User, Mail, Phone, Globe, Briefcase, 
-  GraduationCap, Award, Code, FolderOpen, Trophy, Heart,
-  Save, AlertCircle, CheckCircle, Loader, Edit3, X, Plus, Link as LinkIcon
+  ArrowLeft, CheckCircle, XCircle, Target, TrendingUp, 
+  BookOpen, Award, Sparkles, Building2 
 } from 'lucide-react';
-import { getResumeById, updateResume } from '../services/studentService';
+
+// Skill Match Card Component - Shows individual internship match with company logo and skills
+function SkillMatchCard({ internship, userSkills }) {
+  const requiredSkills = internship.requiredSkills || [];
+  const userSkillsLower = userSkills.map(s => s.toLowerCase());
+  const requiredSkillsLower = requiredSkills.map(s => s.toLowerCase());
+  
+  // Calculate matches
+  const matchedSkills = requiredSkillsLower.filter(req => 
+    userSkillsLower.some(userSkill => 
+      userSkill.includes(req) || req.includes(userSkill)
+    )
+  );
+  
+  const missingSkills = requiredSkillsLower.filter(req => 
+    !userSkillsLower.some(userSkill => 
+      userSkill.includes(req) || req.includes(userSkill)
+    )
+  );
+  
+  const matchPercentage = requiredSkills.length > 0 
+    ? Math.round((matchedSkills.length / requiredSkills.length) * 100)
+    : 0;
+  
+  // Get company object from internship
+  const company = internship.company || {};
+  
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-6 hover:shadow-lg transition-shadow">
+      {/* Company Header */}
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center">
+            {company.logo 
+              ? <img src={company.logo} alt="" className="h-8 w-8 object-contain" />
+              : <Building2 size={20} className="text-emerald-700" />
+            }
+          </div>
+          <div>
+            <h3 className="font-bold text-slate-900">{internship.title}</h3>
+            <p className="text-sm text-slate-500">{company.companyName || company.name || 'Company'}</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <div className={`text-3xl font-extrabold ${
+            matchPercentage >= 75 ? 'text-emerald-600' :
+            matchPercentage >= 50 ? 'text-orange-600' : 
+            'text-red-600'
+          }`}>
+            {matchPercentage}%
+          </div>
+          <p className="text-xs text-slate-500 font-medium">Match Score</p>
+        </div>
+      </div>
+      
+      {/* Progress Bar */}
+      <div className="mb-4">
+        <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+          <div 
+            className={`h-full transition-all ${
+              matchPercentage >= 75 ? 'bg-emerald-500' :
+              matchPercentage >= 50 ? 'bg-orange-500' : 
+              'bg-red-500'
+            }`}
+            style={{ width: `${matchPercentage}%` }}
+          />
+        </div>
+      </div>
+      
+      {/* Skills Breakdown */}
+      <div className="grid md:grid-cols-2 gap-4 mb-4">
+        {/* Matched Skills */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <CheckCircle size={16} className="text-emerald-600" />
+            <span className="text-sm font-semibold text-slate-700">
+              You Have ({matchedSkills.length})
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {matchedSkills.map((skill, idx) => (
+              <span 
+                key={idx}
+                className="px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 text-xs font-medium border border-emerald-200"
+              >
+                {requiredSkills.find(s => s.toLowerCase() === skill) || skill}
+              </span>
+            ))}
+            {matchedSkills.length === 0 && (
+              <span className="text-xs text-slate-400 italic">No matching skills</span>
+            )}
+          </div>
+        </div>
+        
+        {/* Missing Skills */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <XCircle size={16} className="text-red-600" />
+            <span className="text-sm font-semibold text-slate-700">
+              You Need ({missingSkills.length})
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {missingSkills.map((skill, idx) => (
+              <span 
+                key={idx}
+                className="px-2.5 py-1 rounded-md bg-red-50 text-red-700 text-xs font-medium border border-red-200"
+              >
+                {requiredSkills.find(s => s.toLowerCase() === skill) || skill}
+              </span>
+            ))}
+            {missingSkills.length === 0 && (
+              <span className="text-xs text-emerald-600 italic font-medium">
+                ✓ You have all required skills!
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Action Buttons */}
+      <div className="flex gap-2 pt-4 border-t border-slate-100">
+        <Link
+          to={`/internships/${internship.id}`}
+          className="flex-1 text-center px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition"
+        >
+          View Details
+        </Link>
+        {internship.applicationUrl && (
+          <a
+            href={internship.applicationUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 text-center px-4 py-2 rounded-lg border border-emerald-600 text-emerald-600 text-sm font-semibold hover:bg-emerald-50 transition"
+          >
+            Apply Now
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function LearningRecommendation({ skill }) {
+  const courses = {
+    // Programming Languages
+    'python': ['Python for Beginners - Coursera', 'Complete Python Bootcamp - Udemy', 'Python Programming - freeCodeCamp'],
+    'java': ['Java Programming Masterclass - Udemy', 'Java Fundamentals - Coursera', 'Learn Java - Codecademy'],
+    'javascript': ['JavaScript - The Complete Guide - Udemy', 'Modern JavaScript - freeCodeCamp', 'JavaScript Algorithms - Udemy'],
+    'typescript': ['TypeScript Course - Udemy', 'Understanding TypeScript - Maximilian', 'TypeScript for Beginners - YouTube'],
+    'c++': ['C++ Programming - Coursera', 'Complete C++ Developer - Udemy', 'Learn C++ - LearnCpp.com'],
+    'c#': ['C# Fundamentals - Pluralsight', 'Complete C# Unity Developer - Udemy', 'C# Programming - Microsoft Learn'],
+    
+    // Web Development
+    'html': ['HTML & CSS Course - Coursera', 'HTML Full Course - freeCodeCamp', 'Learn HTML - W3Schools'],
+    'css': ['CSS - The Complete Guide - Udemy', 'Responsive Web Design - freeCodeCamp', 'CSS Masterclass - Udemy'],
+    'react': ['React - The Complete Guide - Udemy', 'React Tutorial - React.dev', 'Advanced React Patterns - Frontend Masters'],
+    'angular': ['Angular - The Complete Guide - Udemy', 'Angular Fundamentals - Pluralsight', 'Learn Angular - Angular.io'],
+    'vue.js': ['Vue.js Complete Guide - Udemy', 'Vue Mastery - vueschool.io', 'Vue 3 Course - Coursera'],
+    'node.js': ['Node.js Developer Course - Udemy', 'Node.js Tutorial - NodeSchool', 'The Complete Node.js Developer - Udemy'],
+    'express': ['Express.js Fundamentals - Udemy', 'RESTful APIs with Node.js - Coursera', 'Express Tutorial - MDN'],
+    
+    // Databases
+    'sql': ['SQL for Data Science - Coursera', 'Complete SQL Bootcamp - Udemy', 'SQL Tutorial - W3Schools'],
+    'mysql': ['MySQL Database Administration - Udemy', 'MySQL for Developers - PlanetScale', 'MySQL Course - Coursera'],
+    'postgresql': ['PostgreSQL Bootcamp - Udemy', 'Learn PostgreSQL - Codecademy', 'PostgreSQL Tutorial'],
+    'mongodb': ['MongoDB Complete Guide - Udemy', 'MongoDB University - Free Courses', 'MongoDB for Developers - Coursera'],
+    
+    // Cloud & DevOps
+    'aws': ['AWS Certified Solutions Architect - A Cloud Guru', 'AWS Fundamentals - Coursera', 'AWS Developer Associate - Udemy'],
+    'azure': ['Microsoft Azure Fundamentals - Microsoft Learn', 'Azure Administrator - Pluralsight', 'Azure DevOps - Udemy'],
+    'gcp': ['Google Cloud Platform - Coursera', 'GCP Associate Cloud Engineer - A Cloud Guru', 'GCP Essentials - Qwiklabs'],
+    'docker': ['Docker Mastery - Udemy', 'Docker for Beginners - freeCodeCamp', 'Docker Deep Dive - Pluralsight'],
+    'kubernetes': ['Kubernetes for Beginners - Udemy', 'K8s Tutorial - Kubernetes.io', 'Certified Kubernetes Administrator'],
+    'terraform': ['Terraform Course - Udemy', 'HashiCorp Terraform - A Cloud Guru', 'Learn Terraform - HashiCorp Learn'],
+    'linux': ['Linux Command Line Basics - Udemy', 'Linux Fundamentals - Linux Academy', 'Introduction to Linux - edX'],
+    'bash': ['Bash Scripting Tutorial - Udemy', 'Learn Bash - Codecademy', 'Shell Scripting - LinuxCommand.org'],
+    'ci/cd': ['CI/CD Pipeline - Udemy', 'Continuous Integration - Coursera', 'DevOps CI/CD Tutorial - GitLab'],
+    'devops': ['DevOps Complete Course - Udemy', 'Introduction to DevOps - Coursera', 'DevOps Bootcamp - Linux Academy'],
+    
+    // Mobile Development
+    'android': ['Android Development - Udacity', 'Complete Android Developer - Udemy', 'Android Basics - Google Developers'],
+    'ios': ['iOS Development - Udemy', 'Swift Programming - Stanford', 'iOS App Development - Coursera'],
+    'react native': ['React Native Complete Guide - Udemy', 'React Native Course - Coursera', 'Learn React Native'],
+    'flutter': ['Flutter & Dart Complete Guide - Udemy', 'Flutter Development - Google', 'Flutter Course - Udacity'],
+    'swift': ['Swift Programming - Stanford', 'iOS & Swift Complete Guide - Udemy', 'Learn Swift - Apple Developer'],
+    'kotlin': ['Kotlin for Android - Udemy', 'Kotlin Bootcamp - Udacity', 'Learn Kotlin - JetBrains Academy'],
+    
+    // Data Science & ML
+    'machine learning': ['Machine Learning - Stanford (Coursera)', 'ML with Python - freeCodeCamp', 'Deep Learning Specialization'],
+    'tensorflow': ['TensorFlow Developer Certificate - Coursera', 'TensorFlow Tutorial - tensorflow.org', 'ML with TensorFlow'],
+    'pytorch': ['PyTorch for Deep Learning - Udemy', 'Practical Deep Learning - fast.ai', 'PyTorch Tutorial - pytorch.org'],
+    'deep learning': ['Deep Learning Specialization - Coursera', 'Neural Networks - 3Blue1Brown', 'Deep Learning A-Z - Udemy'],
+    'data science': ['Data Science Bootcamp - Udemy', 'IBM Data Science - Coursera', 'Applied Data Science - MIT'],
+    'pandas': ['Pandas Tutorial - Kaggle', 'Data Analysis with Pandas - Coursera', 'Complete Pandas Bootcamp - Udemy'],
+    'statistics': ['Statistics Fundamentals - Coursera', 'Statistics for Data Science - Udemy', 'Khan Academy Statistics'],
+    'nlp': ['NLP Specialization - Coursera', 'Natural Language Processing - Stanford', 'NLP with Python - Udemy'],
+    'data analysis': ['Data Analyst Bootcamp - Udemy', 'Google Data Analytics - Coursera', 'Data Analysis with Python'],
+    
+    // Design
+    'figma': ['Figma UI/UX Design - Udemy', 'Learn Figma - figma.com', 'Figma Masterclass - YouTube'],
+    'adobe xd': ['Adobe XD Complete Course - Udemy', 'UI/UX with Adobe XD - Coursera', 'Adobe XD Tutorial - Adobe'],
+    'ui design': ['UI Design Fundamentals - Udemy', 'Google UX Design - Coursera', 'Daily UI Challenge - dailyui.co'],
+    'ux design': ['UX Design Specialization - Coursera', 'Interaction Design - IDF', 'UX Research & Design - Udemy'],
+    'ux': ['UX Design Specialization - Coursera', 'Google UX Design Certificate', 'UX Research Methods - Udemy'],
+    'ui/ux': ['UI/UX Design Bootcamp - Udemy', 'Google UX Design - Coursera', 'Complete Web & Mobile Designer - Udemy'],
+    'photoshop': ['Photoshop CC Masterclass - Udemy', 'Photoshop for Beginners - Adobe', 'Photo Editing - Coursera'],
+    'prototyping': ['Prototyping & Design - Coursera', 'Rapid Prototyping - Udemy', 'Figma Prototyping - YouTube'],
+    'user research': ['User Research Methods - Coursera', 'UX Research Fundamentals - Udemy', 'How to Conduct User Research'],
+    
+    // Testing & QA
+    'selenium': ['Selenium WebDriver with Java - Udemy', 'Test Automation - Coursera', 'Selenium Tutorial - guru99.com'],
+    'testing': ['Software Testing Bootcamp - Udemy', 'Software Testing - Coursera', 'QA Engineer Course - Udemy'],
+    'test automation': ['Test Automation University - Applitools', 'Automated Testing - Udemy', 'Cypress Testing - Udemy'],
+    
+    // Other Technologies
+    'git': ['Git & GitHub Complete Course - Udemy', 'Version Control with Git - Coursera', 'Learn Git - Atlassian'],
+    'github': ['GitHub Actions - Udemy', 'Git and GitHub Bootcamp - Udemy', 'GitHub Skills - skills.github.com'],
+    'graphql': ['GraphQL Complete Guide - Udemy', 'Introduction to GraphQL - Apollo', 'GraphQL Tutorial - How To GraphQL'],
+    'rest': ['RESTful API Design - Udemy', 'API Development - Postman', 'REST API Tutorial - restfulapi.net'],
+    'rest api': ['RESTful API Design - Udemy', 'API Development - Postman', 'REST API Tutorial - restfulapi.net'],
+    'api': ['API Development - Udemy', 'REST API Design - Coursera', 'Building APIs - Frontend Masters'],
+    'microservices': ['Microservices Architecture - Udemy', 'Building Microservices - O\'Reilly', 'Microservices Patterns'],
+    'data structures': ['Data Structures & Algorithms - Coursera', 'DSA Course - freeCodeCamp', 'Master the Coding Interview'],
+    'algorithms': ['Algorithms Specialization - Stanford', 'AlgoExpert - algoexpert.io', 'LeetCode Practice - leetcode.com'],
+    'dsa': ['Data Structures & Algorithms - Coursera', 'DSA Complete Course - YouTube', 'Coding Interview Bootcamp'],
+    'system design': ['System Design Interview - Udemy', 'Grokking System Design - Educative', 'System Design Primer - GitHub'],
+    'agile': ['Agile Fundamentals - Coursera', 'Scrum Master Certification - Udemy', 'Agile Development - edX'],
+    'scrum': ['Scrum Master Certification - Udemy', 'Agile with Scrum - Coursera', 'Professional Scrum Master - Scrum.org'],
+    'networking': ['Computer Networking - Coursera', 'Network+ Certification - CompTIA', 'Networking Fundamentals - Udemy'],
+    'cybersecurity': ['Cybersecurity Specialization - Coursera', 'Ethical Hacking - Udemy', 'Security+ Certification - CompTIA'],
+    'security': ['Cybersecurity Fundamentals - Coursera', 'Web Application Security - Udemy', 'Security Basics - CompTIA'],
+    'blockchain': ['Blockchain Basics - Coursera', 'Ethereum & Solidity - Udemy', 'Blockchain Development - Udacity'],
+    'communication': ['Communication Skills - Coursera', 'Business Communication - Udemy', 'Effective Communication - edX'],
+    'problem solving': ['Problem Solving Techniques - Coursera', 'Critical Thinking - Udemy', 'Creative Problem Solving - edX'],
+    'teamwork': ['Team Collaboration - Coursera', 'Teamwork Skills - LinkedIn Learning', 'Working in Teams - Udemy'],
+    'project management': ['Project Management Professional - Coursera', 'PMP Certification - Udemy', 'Agile PM - PMI'],
+  };
+  
+  const skillLower = skill.toLowerCase();
+  const recommendations = courses[skillLower] || [`Search "${skill}" courses on Udemy/Coursera`];
+  
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="h-8 w-8 rounded-lg bg-orange-100 flex items-center justify-center">
+          <Target size={16} className="text-orange-600" />
+        </div>
+        <h4 className="font-semibold text-slate-900">{skill}</h4>
+      </div>
+      <div className="space-y-2">
+        {recommendations.map((course, idx) => (
+          <div key={idx} className="flex items-start gap-2 text-sm">
+            <BookOpen size={14} className="text-slate-400 mt-0.5 flex-shrink-0" />
+            <span className="text-slate-600">{course}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function ResumeAnalysisPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [resume, setResume] = useState(null);
+  const [internships, setInternships] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   
-  // Form states
-  const [personalInfo, setPersonalInfo] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    linkedIn: '',
-    github: '',
-    portfolio: ''
-  });
-  const [summary, setSummary] = useState('');
-  const [skills, setSkills] = useState([]);
-  const [education, setEducation] = useState([]);
-  const [experience, setExperience] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [certifications, setCertifications] = useState([]);
-  const [achievements, setAchievements] = useState([]);
-  const [interests, setInterests] = useState([]);
-  const [preferredRole, setPreferredRole] = useState('');
-  const [preferredLocation, setPreferredLocation] = useState('');
-  
-  // Editing states
-  const [editingSection, setEditingSection] = useState(null);
-
   useEffect(() => {
-    loadResume();
+    Promise.all([
+      getResumeById(id),
+      fetchInternships({ limit: 10, sort: 'bestMatch' })
+    ])
+      .then(([resumeData, internshipData]) => {
+        console.log('Resume data:', resumeData);
+        console.log('Internship data:', internshipData);
+        setResume(resumeData);
+        // Backend returns { data: [...], totalCount, totalPages, currentPage }
+        setInternships(internshipData.data || internshipData.items || internshipData.internships || []);
+      })
+      .catch(err => {
+        console.error('Error loading analysis:', err);
+        setError(err.response?.data?.message || 'Failed to load analysis');
+      })
+      .finally(() => setLoading(false));
   }, [id]);
-
-  const loadResume = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      const data = await getResumeById(id);
-      setResume(data);
-      
-      // Populate form fields
-      setPersonalInfo(data.personalInfo || {});
-      setSummary(data.summary || '');
-      setSkills(data.extractedSkills || []);
-      setEducation(data.education || []);
-      setExperience(data.experience || []);
-      setProjects(data.projects || []);
-      setCertifications(data.certifications || []);
-      setAchievements(data.achievements || []);
-      setInterests(data.interests || []);
-      setPreferredRole(data.preferredRole || '');
-      setPreferredLocation(data.preferredLocation || '');
-    } catch (err) {
-      setError(err.message || 'Failed to load resume data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSave = async () => {
-    try {
-      setSaving(true);
-      setError('');
-      setSuccess('');
-      
-      const updateData = {
-        personalInfo,
-        summary,
-        extractedSkills: skills,
-        education,
-        experience,
-        projects,
-        certifications,
-        achievements,
-        interests,
-        preferredRole,
-        preferredLocation
-      };
-      
-      await updateResume(id, updateData);
-      setSuccess('Resume data saved successfully!');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(err.message || 'Failed to save resume data');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const addSkill = (skill) => {
-    if (skill && !skills.includes(skill)) {
-      setSkills([...skills, skill]);
-    }
-  };
-
-  const removeSkill = (index) => {
-    setSkills(skills.filter((_, i) => i !== index));
-  };
-
-  const addEducation = () => {
-    setEducation([...education, {
-      institution: '',
-      degree: '',
-      field: '',
-      startYear: null,
-      endYear: null,
-      cgpa: null,
-      description: ''
-    }]);
-  };
-
-  const updateEducation = (index, field, value) => {
-    const updated = [...education];
-    updated[index][field] = value;
-    setEducation(updated);
-  };
-
-  const removeEducation = (index) => {
-    setEducation(education.filter((_, i) => i !== index));
-  };
-
-  const addExperience = () => {
-    setExperience([...experience, {
-      company: '',
-      role: '',
-      location: '',
-      startDate: '',
-      endDate: '',
-      current: false,
-      description: '',
-      responsibilities: []
-    }]);
-  };
-
-  const updateExperience = (index, field, value) => {
-    const updated = [...experience];
-    updated[index][field] = value;
-    setExperience(updated);
-  };
-
-  const removeExperience = (index) => {
-    setExperience(experience.filter((_, i) => i !== index));
-  };
-
-  const addProject = () => {
-    setProjects([...projects, {
-      title: '',
-      description: '',
-      technologies: [],
-      url: '',
-      startDate: '',
-      endDate: ''
-    }]);
-  };
-
-  const updateProject = (index, field, value) => {
-    const updated = [...projects];
-    updated[index][field] = value;
-    setProjects(updated);
-  };
-
-  const removeProject = (index) => {
-    setProjects(projects.filter((_, i) => i !== index));
-  };
-
-  const addCertification = () => {
-    setCertifications([...certifications, {
-      title: '',
-      issuer: '',
-      issueDate: '',
-      credentialId: '',
-      url: ''
-    }]);
-  };
-
-  const updateCertification = (index, field, value) => {
-    const updated = [...certifications];
-    updated[index][field] = value;
-    setCertifications(updated);
-  };
-
-  const removeCertification = (index) => {
-    setCertifications(certifications.filter((_, i) => i !== index));
-  };
-
-  const addAchievement = (achievement) => {
-    if (achievement) {
-      setAchievements([...achievements, achievement]);
-    }
-  };
-
-  const removeAchievement = (index) => {
-    setAchievements(achievements.filter((_, i) => i !== index));
-  };
-
-  const addInterest = (interest) => {
-    if (interest && !interests.includes(interest)) {
-      setInterests([...interests, interest]);
-    }
-  };
-
-  const removeInterest = (index) => {
-    setInterests(interests.filter((_, i) => i !== index));
-  };
-
+  
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader className="w-8 h-8 text-emerald-600 animate-spin" />
+      <div className="min-h-screen bg-slate-50 py-8">
+        <div className="container mx-auto px-4 max-w-7xl">
+          <div className="flex items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-600 border-t-transparent" />
+          </div>
+        </div>
       </div>
     );
   }
-
+  
+  if (error || !resume) {
+    return (
+      <div className="min-h-screen bg-slate-50 py-8">
+        <div className="container mx-auto px-4 max-w-7xl">
+          <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
+            <p className="font-semibold text-red-900">{error || 'Resume not found'}</p>
+            <button
+              onClick={() => navigate('/dashboard/resume')}
+              className="mt-4 text-sm font-medium text-red-600 hover:underline"
+            >
+              Back to Resumes
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  const userSkills = resume.extractedSkills || [];
+  
+  // Collect all missing skills across all internships
+  const allMissingSkills = new Set();
+  internships.forEach(internship => {
+    const required = (internship.requiredSkills || []).map(s => s.toLowerCase());
+    const userLower = userSkills.map(s => s.toLowerCase());
+    required.forEach(req => {
+      if (!userLower.some(u => u.includes(req) || req.includes(u))) {
+        allMissingSkills.add(req);
+      }
+    });
+  });
+  
   return (
     <div className="min-h-screen bg-slate-50 py-8">
-      <div className="container mx-auto px-4 max-w-5xl">
+      <div className="container mx-auto px-4 max-w-7xl">
         {/* Header */}
-        <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">Resume Analysis</h1>
-              <p className="text-sm text-slate-600 mt-1">
-                Review and edit the extracted information from your resume
-              </p>
-              {resume?.aiConfidenceScore && (
-                <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-sm">
-                  <CheckCircle className="w-4 h-4" />
-                  <span className="font-medium">AI Confidence: {resume.aiConfidenceScore}%</span>
-                </div>
-              )}
-            </div>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {saving ? (
-                <>
-                  <Loader className="w-4 h-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  Save Changes
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Success Message */}
-        {success && (
-          <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-3">
-            <CheckCircle className="w-5 h-5 text-emerald-600" />
-            <p className="text-sm font-medium text-emerald-900">{success}</p>
-          </div>
-        )}
-
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600" />
-            <p className="text-sm font-medium text-red-900">{error}</p>
-          </div>
-        )}
-
-        {/* Personal Information */}
-        <section className="bg-white rounded-2xl shadow-sm p-6 mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <User className="w-5 h-5 text-emerald-600" />
-            <h2 className="text-lg font-semibold text-slate-900">Personal Information</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label>
-              <input
-                type="text"
-                value={personalInfo.name || ''}
-                onChange={(e) => setPersonalInfo({ ...personalInfo, name: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-                placeholder="John Doe"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                Email *
-              </label>
-              <input
-                type="email"
-                value={personalInfo.email || ''}
-                onChange={(e) => setPersonalInfo({ ...personalInfo, email: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-                placeholder="john@example.com"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
-                <Phone className="w-4 h-4" />
-                Phone
-              </label>
-              <input
-                type="tel"
-                value={personalInfo.phone || ''}
-                onChange={(e) => setPersonalInfo({ ...personalInfo, phone: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-                placeholder="+1 234 567 8900"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
-                <LinkIcon className="w-4 h-4" />
-                LinkedIn
-              </label>
-              <input
-                type="url"
-                value={personalInfo.linkedIn || ''}
-                onChange={(e) => setPersonalInfo({ ...personalInfo, linkedIn: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-                placeholder="https://linkedin.com/in/johndoe"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
-                <LinkIcon className="w-4 h-4" />
-                GitHub
-              </label>
-              <input
-                type="url"
-                value={personalInfo.github || ''}
-                onChange={(e) => setPersonalInfo({ ...personalInfo, github: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-                placeholder="https://github.com/johndoe"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
-                <Globe className="w-4 h-4" />
-                Portfolio
-              </label>
-              <input
-                type="url"
-                value={personalInfo.portfolio || ''}
-                onChange={(e) => setPersonalInfo({ ...personalInfo, portfolio: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-                placeholder="https://johndoe.com"
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Professional Summary */}
-        <section className="bg-white rounded-2xl shadow-sm p-6 mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Edit3 className="w-5 h-5 text-emerald-600" />
-            <h2 className="text-lg font-semibold text-slate-900">Professional Summary</h2>
-          </div>
-          <textarea
-            value={summary}
-            onChange={(e) => setSummary(e.target.value)}
-            rows={4}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none resize-none"
-            placeholder="A brief professional summary about yourself..."
-          />
-        </section>
-
-        {/* Skills */}
-        <section className="bg-white rounded-2xl shadow-sm p-6 mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Code className="w-5 h-5 text-emerald-600" />
-            <h2 className="text-lg font-semibold text-slate-900">Skills</h2>
-          </div>
-          <div className="flex flex-wrap gap-2 mb-3">
-            {skills.map((skill, index) => (
-              <span
-                key={index}
-                className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-sm font-medium"
-              >
-                {skill}
-                <button
-                  onClick={() => removeSkill(index)}
-                  className="p-0.5 hover:bg-emerald-100 rounded-full transition-colors"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Add a skill (press Enter)"
-              className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  addSkill(e.target.value.trim());
-                  e.target.value = '';
-                }
-              }}
-            />
-          </div>
-        </section>
-
-        {/* Education */}
-        <section className="bg-white rounded-2xl shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <GraduationCap className="w-5 h-5 text-emerald-600" />
-              <h2 className="text-lg font-semibold text-slate-900">Education</h2>
-            </div>
-            <button
-              onClick={addEducation}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Add Education
-            </button>
-          </div>
-          <div className="space-y-4">
-            {education.map((edu, index) => (
-              <div key={index} className="p-4 border border-slate-200 rounded-lg relative">
-                <button
-                  onClick={() => removeEducation(index)}
-                  className="absolute top-2 right-2 p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pr-8">
-                  <input
-                    type="text"
-                    value={edu.institution}
-                    onChange={(e) => updateEducation(index, 'institution', e.target.value)}
-                    placeholder="Institution"
-                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                  />
-                  <input
-                    type="text"
-                    value={edu.degree}
-                    onChange={(e) => updateEducation(index, 'degree', e.target.value)}
-                    placeholder="Degree"
-                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                  />
-                  <input
-                    type="text"
-                    value={edu.field}
-                    onChange={(e) => updateEducation(index, 'field', e.target.value)}
-                    placeholder="Field of Study"
-                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                  />
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="number"
-                      value={edu.startYear || ''}
-                      onChange={(e) => updateEducation(index, 'startYear', parseInt(e.target.value))}
-                      placeholder="Start Year"
-                      className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                    />
-                    <input
-                      type="number"
-                      value={edu.endYear || ''}
-                      onChange={(e) => updateEducation(index, 'endYear', parseInt(e.target.value))}
-                      placeholder="End Year"
-                      className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                    />
-                  </div>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={edu.cgpa || ''}
-                    onChange={(e) => updateEducation(index, 'cgpa', parseFloat(e.target.value))}
-                    placeholder="CGPA/GPA"
-                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                  />
-                  <textarea
-                    value={edu.description}
-                    onChange={(e) => updateEducation(index, 'description', e.target.value)}
-                    placeholder="Description (optional)"
-                    rows={2}
-                    className="md:col-span-2 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none resize-none"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Experience */}
-        <section className="bg-white rounded-2xl shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <Briefcase className="w-5 h-5 text-emerald-600" />
-              <h2 className="text-lg font-semibold text-slate-900">Work Experience</h2>
-            </div>
-            <button
-              onClick={addExperience}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Add Experience
-            </button>
-          </div>
-          <div className="space-y-4">
-            {experience.map((exp, index) => (
-              <div key={index} className="p-4 border border-slate-200 rounded-lg relative">
-                <button
-                  onClick={() => removeExperience(index)}
-                  className="absolute top-2 right-2 p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pr-8">
-                  <input
-                    type="text"
-                    value={exp.company}
-                    onChange={(e) => updateExperience(index, 'company', e.target.value)}
-                    placeholder="Company"
-                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                  />
-                  <input
-                    type="text"
-                    value={exp.role}
-                    onChange={(e) => updateExperience(index, 'role', e.target.value)}
-                    placeholder="Role/Position"
-                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                  />
-                  <input
-                    type="text"
-                    value={exp.location}
-                    onChange={(e) => updateExperience(index, 'location', e.target.value)}
-                    placeholder="Location"
-                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                  />
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="text"
-                      value={exp.startDate}
-                      onChange={(e) => updateExperience(index, 'startDate', e.target.value)}
-                      placeholder="Start (MMM YYYY)"
-                      className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                    />
-                    <input
-                      type="text"
-                      value={exp.endDate}
-                      onChange={(e) => updateExperience(index, 'endDate', e.target.value)}
-                      placeholder="End (MMM YYYY)"
-                      className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                    />
-                  </div>
-                  <label className="flex items-center gap-2 col-span-full">
-                    <input
-                      type="checkbox"
-                      checked={exp.current}
-                      onChange={(e) => updateExperience(index, 'current', e.target.checked)}
-                      className="w-4 h-4 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500"
-                    />
-                    <span className="text-sm text-slate-700">I currently work here</span>
-                  </label>
-                  <textarea
-                    value={exp.description}
-                    onChange={(e) => updateExperience(index, 'description', e.target.value)}
-                    placeholder="Description"
-                    rows={3}
-                    className="md:col-span-2 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none resize-none"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Projects */}
-        <section className="bg-white rounded-2xl shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <FolderOpen className="w-5 h-5 text-emerald-600" />
-              <h2 className="text-lg font-semibold text-slate-900">Projects</h2>
-            </div>
-            <button
-              onClick={addProject}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Add Project
-            </button>
-          </div>
-          <div className="space-y-4">
-            {projects.map((project, index) => (
-              <div key={index} className="p-4 border border-slate-200 rounded-lg relative">
-                <button
-                  onClick={() => removeProject(index)}
-                  className="absolute top-2 right-2 p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-                <div className="grid grid-cols-1 gap-3 pr-8">
-                  <input
-                    type="text"
-                    value={project.title}
-                    onChange={(e) => updateProject(index, 'title', e.target.value)}
-                    placeholder="Project Title"
-                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                  />
-                  <textarea
-                    value={project.description}
-                    onChange={(e) => updateProject(index, 'description', e.target.value)}
-                    placeholder="Project Description"
-                    rows={3}
-                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none resize-none"
-                  />
-                  <input
-                    type="url"
-                    value={project.url}
-                    onChange={(e) => updateProject(index, 'url', e.target.value)}
-                    placeholder="Project URL (optional)"
-                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Certifications */}
-        <section className="bg-white rounded-2xl shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <Award className="w-5 h-5 text-emerald-600" />
-              <h2 className="text-lg font-semibold text-slate-900">Certifications</h2>
-            </div>
-            <button
-              onClick={addCertification}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Add Certification
-            </button>
-          </div>
-          <div className="space-y-4">
-            {certifications.map((cert, index) => (
-              <div key={index} className="p-4 border border-slate-200 rounded-lg relative">
-                <button
-                  onClick={() => removeCertification(index)}
-                  className="absolute top-2 right-2 p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pr-8">
-                  <input
-                    type="text"
-                    value={cert.title}
-                    onChange={(e) => updateCertification(index, 'title', e.target.value)}
-                    placeholder="Certification Title"
-                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                  />
-                  <input
-                    type="text"
-                    value={cert.issuer}
-                    onChange={(e) => updateCertification(index, 'issuer', e.target.value)}
-                    placeholder="Issuing Organization"
-                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                  />
-                  <input
-                    type="text"
-                    value={cert.issueDate}
-                    onChange={(e) => updateCertification(index, 'issueDate', e.target.value)}
-                    placeholder="Issue Date"
-                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                  />
-                  <input
-                    type="url"
-                    value={cert.url}
-                    onChange={(e) => updateCertification(index, 'url', e.target.value)}
-                    placeholder="Certificate URL (optional)"
-                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Achievements */}
-        <section className="bg-white rounded-2xl shadow-sm p-6 mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Trophy className="w-5 h-5 text-emerald-600" />
-            <h2 className="text-lg font-semibold text-slate-900">Achievements</h2>
-          </div>
-          <div className="space-y-2 mb-3">
-            {achievements.map((achievement, index) => (
-              <div key={index} className="flex items-start gap-2 p-3 bg-slate-50 rounded-lg">
-                <span className="flex-1 text-sm text-slate-700">{achievement}</span>
-                <button
-                  onClick={() => removeAchievement(index)}
-                  className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-          <input
-            type="text"
-            placeholder="Add an achievement (press Enter)"
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                addAchievement(e.target.value.trim());
-                e.target.value = '';
-              }
-            }}
-          />
-        </section>
-
-        {/* Interests */}
-        <section className="bg-white rounded-2xl shadow-sm p-6 mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Heart className="w-5 h-5 text-emerald-600" />
-            <h2 className="text-lg font-semibold text-slate-900">Interests</h2>
-          </div>
-          <div className="flex flex-wrap gap-2 mb-3">
-            {interests.map((interest, index) => (
-              <span
-                key={index}
-                className="inline-flex items-center gap-1 px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-sm"
-              >
-                {interest}
-                <button
-                  onClick={() => removeInterest(index)}
-                  className="p-0.5 hover:bg-slate-200 rounded-full transition-colors"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            ))}
-          </div>
-          <input
-            type="text"
-            placeholder="Add an interest (press Enter)"
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                addInterest(e.target.value.trim());
-                e.target.value = '';
-              }
-            }}
-          />
-        </section>
-
-        {/* Career Preferences */}
-        <section className="bg-white rounded-2xl shadow-sm p-6 mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Briefcase className="w-5 h-5 text-emerald-600" />
-            <h2 className="text-lg font-semibold text-slate-900">Career Preferences</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Preferred Role</label>
-              <input
-                type="text"
-                value={preferredRole}
-                onChange={(e) => setPreferredRole(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-                placeholder="e.g., Software Engineer, Data Analyst"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Preferred Location</label>
-              <input
-                type="text"
-                value={preferredLocation}
-                onChange={(e) => setPreferredLocation(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-                placeholder="e.g., Bangalore, Remote"
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Action Buttons */}
-        <div className="flex gap-3 justify-end">
+        <div className="mb-6">
           <button
             onClick={() => navigate('/dashboard/resume')}
-            className="px-6 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors"
+            className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 mb-4"
           >
-            Cancel
+            <ArrowLeft size={16} />
+            Back to Resumes
           </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {saving ? (
-              <>
-                <Loader className="w-4 h-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                Save & Continue
-              </>
-            )}
-          </button>
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900">Resume Analysis</h1>
+              <p className="text-slate-600 mt-1">{resume.fileName}</p>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-50 border border-emerald-200">
+              <Sparkles size={18} className="text-emerald-600" />
+              <span className="font-semibold text-emerald-900">
+                {userSkills.length} Skills Detected
+              </span>
+            </div>
+          </div>
         </div>
+        
+        {/* Your Skills */}
+        <div className="mb-6 rounded-xl border border-slate-200 bg-white p-6">
+          <h2 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
+            <Award size={20} className="text-emerald-600" />
+            Your Skills
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {userSkills.length > 0 ? (
+              userSkills.map((skill, idx) => (
+                <span 
+                  key={idx}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-sm font-medium border border-emerald-200"
+                >
+                  {skill}
+                </span>
+              ))
+            ) : (
+              <p className="text-sm text-slate-500 italic">No skills extracted from resume</p>
+            )}
+          </div>
+        </div>
+        
+        {/* Match Analysis */}
+        <div className="mb-6">
+          <h2 className="font-bold text-slate-900 text-xl mb-4 flex items-center gap-2">
+            <TrendingUp size={22} className="text-emerald-600" />
+            Internship Match Analysis
+          </h2>
+          <div className="grid gap-4">
+            {internships.length > 0 ? (
+              internships.map(internship => (
+                <SkillMatchCard 
+                  key={internship.id} 
+                  internship={internship} 
+                  userSkills={userSkills}
+                />
+              ))
+            ) : (
+              <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
+                <p className="text-slate-500">No internships available for matching</p>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Learning Recommendations */}
+        {allMissingSkills.size > 0 && (
+          <div>
+            <h2 className="font-bold text-slate-900 text-xl mb-4 flex items-center gap-2">
+              <BookOpen size={22} className="text-orange-600" />
+              Recommended Courses to Learn
+            </h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from(allMissingSkills).slice(0, 6).map((skill, idx) => (
+                <LearningRecommendation key={idx} skill={skill} />
+              ))}
+            </div>
+            {allMissingSkills.size > 6 && (
+              <p className="text-sm text-slate-500 mt-4 text-center">
+                + {allMissingSkills.size - 6} more skills to improve your matches
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

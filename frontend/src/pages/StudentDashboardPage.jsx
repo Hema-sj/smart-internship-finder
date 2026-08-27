@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { fetchInternships, fetchLocationStats } from '../services/internshipService';
-import { getMyApplications, getSaved } from '../services/studentService';
+import { getMyApplications, getSaved, getMyProfile } from '../services/studentService';
 import LocationGrid from '../components/LocationGrid';
 import CompensationBadge from '../components/CompensationBadge';
 import { getCompensationSummary } from '../utils/compensation';
 import {
   Sparkles, Briefcase, Bookmark, MapPin, TrendingUp,
-  ArrowRight, Building2, Award, Zap,
+  ArrowRight, Building2, Award, Zap, CheckCircle,
 } from 'lucide-react';
 
 function StatCard({ icon: Icon, label, value, color, sub }) {
@@ -63,26 +63,65 @@ function InternshipMiniCard({ internship }) {
   );
 }
 
-function AiMatchBanner() {
+function AiMatchBanner({ profile, topMatch }) {
+  const hasSkills = profile?.skills && profile.skills.length > 0;
+  const avgMatch = topMatch?.aiMatch || 0;
+  
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 p-6 text-white">
       <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10" />
       <div className="absolute -right-4 top-10 h-24 w-24 rounded-full bg-white/10" />
-      <div className="relative">
-        <div className="flex items-center gap-2 mb-2">
-          <Sparkles size={18} className="text-yellow-300" />
-          <span className="text-xs font-bold tracking-widest uppercase text-white/80">AI Powered</span>
+      <div className="relative grid md:grid-cols-2 gap-6">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles size={18} className="text-yellow-300" />
+            <span className="text-xs font-bold tracking-widest uppercase text-white/80">AI Powered</span>
+          </div>
+          <h3 className="text-xl font-extrabold">Get Your AI Match Score</h3>
+          <p className="mt-1 text-sm text-white/80 max-w-xs">
+            {hasSkills 
+              ? 'Your skills are matched with internship requirements using AI.' 
+              : 'Upload your resume and let our AI find internships tailored to your skills.'}
+          </p>
+          <Link
+            to="/dashboard/resume/upload"
+            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2 text-sm font-bold text-purple-700 hover:bg-purple-50 transition"
+          >
+            <Zap size={14} /> {hasSkills ? 'Update Resume' : 'Upload Resume'}
+          </Link>
         </div>
-        <h3 className="text-xl font-extrabold">Get Your AI Match Score</h3>
-        <p className="mt-1 text-sm text-white/80 max-w-xs">
-          Upload your resume and let our AI find internships tailored to your skills.
-        </p>
-        <Link
-          to="/resume"
-          className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2 text-sm font-bold text-purple-700 hover:bg-purple-50 transition"
-        >
-          <Zap size={14} /> Upload Resume
-        </Link>
+        
+        {hasSkills && avgMatch > 0 && (
+          <div className="rounded-xl bg-white/10 backdrop-blur-sm p-5">
+            <p className="text-xs font-bold tracking-widest uppercase text-white/70">Top Match</p>
+            <div className="mt-3 flex items-baseline gap-2">
+              <span className="text-5xl font-extrabold">{avgMatch}%</span>
+              <span className="text-lg text-white/80">match</span>
+            </div>
+            <p className="mt-2 text-sm text-white/80">
+              {topMatch?.title || 'Best matching internship'}
+            </p>
+            <p className="text-xs text-white/60 mt-1">
+              {topMatch?.company?.companyName || topMatch?.companyId?.name || 'Company'}
+            </p>
+          </div>
+        )}
+        
+        {hasSkills && !avgMatch && (
+          <div className="rounded-xl bg-white/10 backdrop-blur-sm p-5">
+            <p className="text-xs font-bold tracking-widest uppercase text-white/70">Skills Found</p>
+            <div className="mt-3 flex items-baseline gap-2">
+              <span className="text-5xl font-extrabold">{profile.skills.length}</span>
+              <span className="text-lg text-white/80">skills</span>
+            </div>
+            <p className="mt-2 text-sm text-white/80">
+              Add more skills to improve match scores
+            </p>
+            <Link to="/dashboard/profile" className="mt-2 text-xs font-semibold text-yellow-300 hover:underline">
+              Update Profile →
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -91,22 +130,38 @@ function AiMatchBanner() {
 export default function StudentDashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const firstName = user?.name?.split(' ')[0] || 'there';
 
+  const [profile, setProfile]           = useState(null);
   const [internships, setInternships]   = useState([]);
   const [locations, setLocations]       = useState([]);
   const [applications, setApplications] = useState([]);
   const [saved, setSaved]               = useState([]);
   const [loading, setLoading]           = useState(true);
+  const [successMessage, setSuccessMessage] = useState('');
+
+  useEffect(() => {
+    // Show success message if coming from resume upload
+    if (location.state?.message) {
+      setSuccessMessage(location.state.message);
+      // Clear the message after 5 seconds
+      setTimeout(() => setSuccessMessage(''), 5000);
+      // Clear the location state
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   useEffect(() => {
     Promise.allSettled([
+      getMyProfile(),
       fetchInternships({ limit: 6, sort: 'bestMatch' }),
       fetchLocationStats(),
       getMyApplications(),
       getSaved(),
-    ]).then(([intRes, locRes, appRes, savRes]) => {
-      if (intRes.status === 'fulfilled') setInternships(intRes.value.items || []);
+    ]).then(([profRes, intRes, locRes, appRes, savRes]) => {
+      if (profRes.status === 'fulfilled') setProfile(profRes.value);
+      if (intRes.status === 'fulfilled') setInternships(intRes.value.items || intRes.value.internships || []);
       if (locRes.status === 'fulfilled') {
         const payload = locRes.value;
         setLocations(Array.isArray(payload) ? payload : payload.locations || []);
@@ -118,9 +173,35 @@ export default function StudentDashboardPage() {
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  
+  // Find the internship with highest match score
+  const topMatch = internships.reduce((best, curr) => {
+    const currMatch = curr.aiMatch || 0;
+    const bestMatch = best?.aiMatch || 0;
+    return currMatch > bestMatch ? curr : best;
+  }, null);
 
   return (
     <div className="space-y-8">
+      {/* Success Message */}
+      {successMessage && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 flex items-start gap-3">
+          <CheckCircle className="text-emerald-600 flex-shrink-0 mt-0.5" size={20} />
+          <div className="flex-1">
+            <p className="font-semibold text-emerald-900">{successMessage}</p>
+            <p className="text-sm text-emerald-700 mt-1">
+              Your skills have been extracted and matched with available internships.
+            </p>
+          </div>
+          <button
+            onClick={() => setSuccessMessage('')}
+            className="text-emerald-600 hover:text-emerald-800"
+          >
+            ×
+          </button>
+        </div>
+      )}
+      
       {/* Header */}
       <div>
         <p className="text-sm font-semibold text-emerald-600 uppercase tracking-widest">{greeting}</p>
@@ -135,10 +216,10 @@ export default function StudentDashboardPage() {
         <StatCard icon={Briefcase}  label="Applications"    value={loading ? '—' : applications.length}  color="bg-gradient-to-br from-emerald-500 to-emerald-700" />
         <StatCard icon={Bookmark}   label="Saved"           value={loading ? '—' : saved.length}         color="bg-gradient-to-br from-blue-500 to-blue-700" />
         <StatCard icon={TrendingUp} label="Open Listings"   value={loading ? '—' : internships.length}   color="bg-gradient-to-br from-violet-500 to-violet-700" />
-        <StatCard icon={Award}      label="Profile Score"   value="72%"   sub="Add skills to improve"    color="bg-gradient-to-br from-orange-400 to-orange-600" />
+        <StatCard icon={Award}      label="Skills Added"    value={loading ? '—' : (profile?.skills?.length || 0)}  sub="Update your profile"    color="bg-gradient-to-br from-orange-400 to-orange-600" />
       </div>
 
-      <AiMatchBanner />
+      <AiMatchBanner profile={profile} topMatch={topMatch} />
 
       <div>
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">

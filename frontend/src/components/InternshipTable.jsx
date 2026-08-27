@@ -2,6 +2,30 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ExternalLink, CheckCircle, AlertCircle } from 'lucide-react';
 import CertificateBadge from './CertificateBadge';
+import { LOCATION_CAREER_LINKS } from '../data/locations';
+
+// Helper to get company career link
+function getCompanyLink(companyName, location) {
+  if (!location || !LOCATION_CAREER_LINKS[location]) return null;
+  
+  const links = LOCATION_CAREER_LINKS[location];
+  
+  // Try exact match first
+  let match = links.find(link => 
+    link.company.toLowerCase() === companyName.toLowerCase()
+  );
+  
+  // Try partial match
+  if (!match) {
+    match = links.find(link => 
+      companyName.toLowerCase().includes(link.company.toLowerCase()) ||
+      link.company.toLowerCase().includes(companyName.toLowerCase())
+    );
+  }
+  
+  // If no match, return the first company link for that location as default
+  return match ? match.url : (links.length > 0 ? links[0].url : null);
+}
 
 /**
  * InternshipTable - Displays internships in tabular format with 15 columns
@@ -28,6 +52,7 @@ export default function InternshipTable({
   loading = false, 
   onViewDetails, 
   emptyMessage = 'No internships found',
+  onLocationClick, // New prop to handle location clicks
 }) {
   const [expandedSkills, setExpandedSkills] = useState({});
   const navigate = useNavigate();
@@ -72,6 +97,9 @@ export default function InternshipTable({
                 Company
               </th>
               <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
+                Company Link
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
                 Course / Role
               </th>
               <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
@@ -87,22 +115,10 @@ export default function InternshipTable({
                 Compensation
               </th>
               <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
-                Paid / Unpaid
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
                 Certificate
               </th>
               <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
                 Required Skills
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
-                AI Match
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
-                Company Rating
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
-                Application Status
               </th>
               <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
                 View Details
@@ -163,6 +179,27 @@ export default function InternshipTable({
                     </button>
                   </td>
 
+                  {/* Column 3.5: Company Career Link */}
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    {(() => {
+                      const careerLink = getCompanyLink(internship.displayCompany, internship.displayLocation);
+                      return careerLink ? (
+                        <a
+                          href={careerLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-700 hover:text-emerald-800 hover:underline"
+                          title={`Visit ${internship.displayCompany} careers page`}
+                        >
+                          Apply Now
+                          <ExternalLink size={14} />
+                        </a>
+                      ) : (
+                        <span className="text-sm text-slate-400">—</span>
+                      );
+                    })()}
+                  </td>
+
                   {/* Column 4: Course / Role */}
                   <td className="px-4 py-4">
                     <div className="text-sm font-semibold text-slate-800 max-w-xs">
@@ -173,9 +210,9 @@ export default function InternshipTable({
                   {/* Column 5: Location */}
                   <td className="px-4 py-4">
                     <button
-                      onClick={() => navigate(`/locations/${internship.displayLocation.toLowerCase()}`)}
+                      onClick={() => onLocationClick ? onLocationClick(internship.displayLocation) : navigate(`/locations/${internship.displayLocation.toLowerCase()}`)}
                       className="text-sm text-emerald-700 hover:text-emerald-800 font-semibold hover:underline whitespace-nowrap transition"
-                      title={`View all internships in ${internship.displayLocation}`}
+                      title={`View company links for ${internship.displayLocation}`}
                     >
                       {internship.displayLocation}
                     </button>
@@ -196,22 +233,7 @@ export default function InternshipTable({
                     {internship.displayCompensation}
                   </td>
 
-                  {/* Column 9: Paid / Unpaid */}
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <span
-                      className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-bold ${
-                        internship.displayInternshipType === 'Paid'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : internship.displayInternshipType === 'Unpaid'
-                          ? 'bg-slate-100 text-slate-600 border border-slate-200'
-                          : 'bg-amber-50 text-amber-700 border border-amber-200'
-                      }`}
-                    >
-                      {internship.displayInternshipType}
-                    </span>
-                  </td>
-
-                  {/* Column 10: Certificate */}
+                  {/* Column 9: Certificate */}
                   <td className="px-4 py-4 whitespace-nowrap">
                     <CertificateBadge 
                       certificateType={internship.certificateType || internship.displayCertificate} 
@@ -219,7 +241,7 @@ export default function InternshipTable({
                     />
                   </td>
 
-                  {/* Column 11: Required Skills */}
+                  {/* Column 10: Required Skills */}
                   <td className="px-4 py-4">
                     <div className="flex flex-wrap gap-1 max-w-xs">
                       {displaySkills[0] === 'Not Disclosed' ? (
@@ -255,32 +277,12 @@ export default function InternshipTable({
                     </div>
                   </td>
 
-                  {/* Column 12: AI Match */}
+                  {/* Column 11: AI Match */}
                   <td className="px-4 py-4 text-sm font-semibold text-emerald-700 whitespace-nowrap">
                     {internship.displayAIMatch}
                   </td>
 
-                  {/* Column 13: Company Rating */}
-                  <td className="px-4 py-4 text-sm font-semibold text-slate-700 whitespace-nowrap">
-                    {internship.displayCompanyRating}
-                  </td>
-
-                  {/* Column 14: Application Status */}
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <span
-                      className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-bold ${
-                        internship.displayApplicationStatus === 'Open'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : internship.displayApplicationStatus === 'Closed'
-                          ? 'bg-red-50 text-red-700 border border-red-200'
-                          : 'bg-amber-50 text-amber-700 border border-amber-200'
-                      }`}
-                    >
-                      {internship.displayApplicationStatus}
-                    </span>
-                  </td>
-
-                  {/* Column 15: View Details */}
+                  {/* Column 12: View Details */}
                   <td className="px-4 py-4 text-center whitespace-nowrap">
                     <button
                       onClick={() => onViewDetails(internship)}

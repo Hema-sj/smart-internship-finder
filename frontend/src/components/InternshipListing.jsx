@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, ExternalLink } from 'lucide-react';
 import InternshipSearch from './InternshipSearch';
 import InternshipTable from './InternshipTable';
 import InternshipDetailModal from './InternshipDetailModal';
+import CompanyLinksModal from './CompanyLinksModal';
 import LocationFilter from './LocationFilter';
 import CompensationStatsCards from './CompensationStatsCards';
 import {
@@ -11,7 +12,7 @@ import {
   fetchInternshipById,
   fetchInternshipStats,
 } from '../services/internshipService';
-import { CANONICAL_LOCATIONS } from '../data/locations';
+import { CANONICAL_LOCATIONS, LOCATION_CAREER_LINKS } from '../data/locations';
 
 function Pagination({ page, pages, total, limit, onPage }) {
   if (pages <= 1) return null;
@@ -94,6 +95,7 @@ export default function InternshipListing({ compact = false, pageSize = 10, titl
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0, limit: pageSize });
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
+  const [companyLinksLocation, setCompanyLinksLocation] = useState(null);
   const [stats, setStats] = useState({ total: 0, paid: 0, unpaid: 0 });
   const [statsLoading, setStatsLoading] = useState(true);
   const debounceRef = useRef(null);
@@ -196,68 +198,87 @@ export default function InternshipListing({ compact = false, pageSize = 10, titl
   };
 
   const heading = location ? `Internships in ${location}` : 'Internship Listings';
+  const companyLinks = (location && LOCATION_CAREER_LINKS[location]) ? LOCATION_CAREER_LINKS[location] : [];
 
   return (
     <div className="space-y-5">
-      {!compact && (
-        <div>
-          <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-emerald-600">
-            {location ? <><MapPin size={12} /> {location}</> : 'Browse'}
-          </p>
-          <h1 className="mt-0.5 text-3xl font-extrabold text-slate-900">{heading}</h1>
-          {!loading && (
-            <p className="mt-0.5 text-sm text-slate-500">
-              {pagination.total.toLocaleString()} internship{pagination.total !== 1 ? 's' : ''} found
-              {location ? ` in ${location}` : ''}
-            </p>
-          )}
-        </div>
-      )}
+      <div>
+        <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-emerald-600">
+          {location ? <><MapPin size={12} /> {location}</> : 'Browse'}
+        </p>
+        <h1 className="mt-0.5 text-3xl font-extrabold text-slate-900">{heading}</h1>
+        <p className="mt-0.5 text-sm text-slate-500">
+          Select a location to see official company career links
+        </p>
+      </div>
 
-      {!compact && (
-        <CompensationStatsCards
-          total={stats.total}
-          paid={stats.paid}
-          unpaid={stats.unpaid}
-          loading={statsLoading}
-        />
-      )}
+      <CompensationStatsCards
+        total={stats.total}
+        paid={stats.paid}
+        unpaid={stats.unpaid}
+        loading={statsLoading}
+      />
 
       <LocationFilter
         value={location}
         onChange={resetPage(setLocation)}
         locations={CANONICAL_LOCATIONS}
-        enableNavigation={true}
+        enableNavigation={false}
       />
 
-      <InternshipSearch
-        keyword={inputVal}
-        onKeywordChange={handleKeywordChange}
-        compensationType={compensationType}
-        onCompensationChange={resetPage(setCompensationType)}
-        course={course}
-        onCourseChange={resetPage(setCourse)}
-        startDate={startDate}
-        onStartDateChange={resetPage(setStartDate)}
-        sort={sort}
-        onSortChange={resetPage(setSort)}
-        location={location}
-        onLocationChange={resetPage(setLocation)}
-        compensationRange={compensationRange}
-        onCompensationRangeChange={resetPage(setCompensationRange)}
-        certificate={certificate}
-        onCertificateChange={resetPage(setCertificate)}
-        mode={mode}
-        onModeChange={resetPage(setMode)}
-        duration={duration}
-        onDurationChange={resetPage(setDuration)}
-        onSubmit={load}
-        onClearFilters={() => load()}
-      />
+      {/* Show company career links when location is selected */}
+      {location && companyLinks.length > 0 && (
+        <div className="rounded-xl border-2 border-emerald-100 bg-emerald-50 p-6">
+          <h3 className="text-sm font-bold text-emerald-900 mb-3 flex items-center gap-2">
+            <MapPin size={16} />
+            Official Company Career Pages in {location}
+          </h3>
+          <p className="text-xs text-emerald-700 mb-4">
+            Apply directly on these official company career websites ↓
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {companyLinks.map((item, index) => (
+              <a
+                key={index}
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center justify-between p-4 rounded-lg border-2 border-white bg-white hover:border-emerald-500 hover:shadow-md transition-all"
+              >
+                <div className="flex-1">
+                  <h4 className="text-sm font-bold text-slate-900 group-hover:text-emerald-600">
+                    {item.company}
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-0.5">Careers Portal</p>
+                </div>
+                <ExternalLink size={16} className="text-slate-400 group-hover:text-emerald-600 ml-2 flex-shrink-0" />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Show helpful message when no location is selected */}
+      {!location && (
+        <div className="rounded-xl border-2 border-blue-100 bg-blue-50 p-6 text-center">
+          <h3 className="text-sm font-bold text-blue-900 mb-2">
+            💡 Want to see company career links?
+          </h3>
+          <p className="text-xs text-blue-700">
+            Select a city from the <strong>"Preferred location"</strong> dropdown above to see official company career pages for that location!
+          </p>
+        </div>
+      )}
+
+      {/* Removed search filters to show only company career links */}
 
       <InternshipTable
         internships={items}
         onViewDetails={handleViewDetails}
+        onLocationClick={(loc) => {
+          console.log('Location clicked:', loc);
+          setCompanyLinksLocation(loc);
+        }}
         title={compact ? title : undefined}
         loading={loading}
         emptyMessage={emptyStateMessage({ location, course, compensationType, keyword, startDate })}
@@ -276,6 +297,10 @@ export default function InternshipListing({ compact = false, pageSize = 10, titl
 
       {selected && (
         <InternshipDetailModal internship={selected} onClose={() => setSelected(null)} />
+      )}
+
+      {companyLinksLocation && (
+        <CompanyLinksModal location={companyLinksLocation} onClose={() => setCompanyLinksLocation(null)} />
       )}
     </div>
   );

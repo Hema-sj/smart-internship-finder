@@ -130,7 +130,7 @@ export default function DashboardLayout() {
             <span className="text-sm font-bold text-slate-900">Smart Intern</span>
           </div>
           <div className="ml-auto flex items-center gap-3">
-            <NavLink to="/notifications" className="relative text-slate-500 hover:text-slate-900">
+            <NavLink to="/dashboard/notifications" className="relative text-slate-500 hover:text-slate-900">
               <Bell size={20} />
             </NavLink>
             <div className="h-8 w-8 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center justify-center">

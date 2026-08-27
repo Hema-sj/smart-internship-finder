@@ -3,7 +3,7 @@ import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const studentLinks = [
-  ['Home', '/'], ['Internships', '/internships'], ['Search By', '/search-by'], ['Locations', '/locations'], ['Dream Company', '/dream-company'], ['Resources', '/resources'], ['Create Resume AI', '/resume/create'], ['Upload Resume', '/resume/upload'], ['Student Profile', '/profile']
+  ['Home', '/'], ['Internships', '/internships'], ['Locations', '/locations'], ['Dashboard', '/dashboard'], ['My Profile', '/dashboard/profile']
 ];
 
 export default function Header() {
