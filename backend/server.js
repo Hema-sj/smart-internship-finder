@@ -18,14 +18,18 @@ import reviewRouter       from './routes/reviewRoutes.js';
 import resourceRouter     from './routes/resourceRoutes.js';
 import migrationRouter    from './routes/migrationRoutes.js';
 
-const __dirname     = dirname(fileURLToPath(import.meta.url));
-const FRONTEND_DIST = join(__dirname, '..', 'frontend', 'dist');
+const __dirname = dirname(fileURLToPath(import.meta.url));
+// Only define FRONTEND_DIST in development
+const FRONTEND_DIST = process.env.NODE_ENV !== 'production' 
+  ? join(__dirname, '..', 'frontend', 'dist')
+  : null;
 
 const app = express();
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 const allowedOrigins = [
   process.env.CORS_ORIGIN || process.env.CLIENT_URL || 'http://localhost:5173',
+  'https://smart-internship-finder.vercel.app',  // Production frontend
   'http://localhost:5000',   // same-origin production
   'http://localhost:5173',
   'http://localhost:5174',
