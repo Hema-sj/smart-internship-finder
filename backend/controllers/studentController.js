@@ -383,106 +383,77 @@ export async function uploadResume(request, response, next) {
     };
 
     try {
-      const fs = (await import('fs')).default;
       const { Blob } = await import('buffer');
       
-      let fileBlob;
-      if (file.path && fs.existsSync(file.path)) {
-        const fileBuffer = fs.readFileSync(file.path);
-        fileBlob = new Blob([fileBuffer], { type: file.mimetype });
-      } else if (file.buffer) {
-        fileBlob = new Blob([file.buffer], { type: file.mimetype });
-      } else {
-        throw new Error('No file data available');
-      }
+      // With memoryStorage, file.buffer is always available
+      const fileBlob = new Blob([file.buffer], { type: file.mimetype });
 
       // Use native FormData (Node 18+)
       const formData = new FormData();
       formData.append('file', fileBlob, file.originalname);
 
       const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
       const aiResponse = await fetch(`${aiServiceUrl}/api/resume/parse`, {
         method: 'POST',
         body: formData,
-      });
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timeout));
 
       if (aiResponse.ok) {
         extractedData = await aiResponse.json();
-        console.log(`[AI Service] Successfully extracted ${extractedData.skills?.length || 0} skills`);
-        console.log(`[AI Service] Text length: ${extractedData.text?.length || 0} characters`);
-        console.log(`[AI Service] Text preview:`, extractedData.text?.substring(0, 200) || 'No text');
+        console.log(`[AI Service] Extracted ${extractedData.skills?.length || 0} skills`);
       } else {
         const errorText = await aiResponse.text();
-        console.warn('[AI Service] Resume parsing failed:', aiResponse.status, errorText);
+        console.warn('[AI Service] Parse failed:', aiResponse.status, errorText);
       }
     } catch (aiError) {
-      console.warn('[AI Service] Resume parsing error:', aiError.message);
-      // Fallback: Try to extract text and skills manually
+      console.warn('[AI Service] Unavailable:', aiError.message);
+      // ── Safe fallback: extract what we can from the buffer without pdf-parse ──
       try {
-        // Check if file is an image - images require AI service for OCR
+        const isPDF  = file.mimetype === 'application/pdf';
+        const isDocx = file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        const isDoc  = file.mimetype === 'application/msword';
         const isImage = file.mimetype.startsWith('image/');
-        const isPDF = file.mimetype === 'application/pdf';
-        
+
         if (isImage) {
-          console.warn('[Fallback] Image files require AI service for text extraction (OCR)');
-          extractedData.text = 'Image file - requires AI service for OCR. Please ensure AI service is running.';
+          extractedData.text = 'Image uploaded. AI service required for OCR text extraction.';
           extractedData.aiConfidenceScore = 0;
-          extractedData.skills = [];
         } else if (isPDF) {
-          // Try to extract text from PDF using pdf-parse
-          try {
-            // Use dynamic import with workaround for pdf-parse test-file bug
-            const pdfParseModule = await import('pdf-parse/lib/pdf-parse.js').catch(
-              () => import('pdf-parse')
-            );
-            const pdfParse = pdfParseModule.default || pdfParseModule;
-            
-            // With memoryStorage, file.buffer is always available
-            const pdfBuffer = file.buffer;
-            
-            if (pdfBuffer) {
-              const pdfData = await pdfParse(pdfBuffer);
-              const pdfText = pdfData.text;
-              
-              // Check if PDF has actual text or is just a scanned image
-              if (pdfText && pdfText.trim().length > 50) {
-                const skills = extractSkillsFromResume(pdfText);
-                extractedData.skills = skills;
-                extractedData.text = pdfText;
-                extractedData.aiConfidenceScore = skills.length > 0 ? 70 : 40;
-                console.log(`[Fallback PDF] Extracted ${skills.length} skills from PDF`);
-              } else {
-                // PDF has no text - it's likely a scanned image, needs OCR
-                console.warn('[Fallback PDF] PDF has no readable text - likely a scanned image. OCR required.');
-                extractedData.text = 'PDF appears to be a scanned image. Please use a text-based PDF or upload as an image (JPG/PNG) for OCR processing.';
-                extractedData.aiConfidenceScore = 0;
-                extractedData.skills = [];
-              }
-            }
-          } catch (pdfError) {
-            console.warn('[Fallback PDF] Error:', pdfError.message);
+          // Extract readable ASCII text directly from the PDF buffer (no external lib needed)
+          const rawText = file.buffer.toString('latin1');
+          // Pull text between BT/ET markers or just printable ASCII runs
+          const asciiMatches = rawText.match(/[\x20-\x7E]{4,}/g) || [];
+          const pdfText = asciiMatches
+            .filter(s => /[a-zA-Z]/.test(s))   // keep only strings with letters
+            .join(' ');
+
+          if (pdfText.trim().length > 50) {
+            const skills = extractSkillsFromResume(pdfText);
+            extractedData.skills = skills;
+            extractedData.text = pdfText;
+            extractedData.aiConfidenceScore = skills.length > 0 ? 65 : 35;
+            console.log(`[Fallback] Extracted ${skills.length} skills from PDF buffer`);
+          } else {
+            extractedData.text = 'Could not extract text from PDF. Upload a text-based (non-scanned) PDF for best results.';
+            extractedData.aiConfidenceScore = 0;
           }
-        } else {
-          // Try to read DOC/DOCX as text
-          const fs = (await import('fs')).default;
-          let fileText = '';
-          
-          if (file.path && fs.existsSync(file.path)) {
-            fileText = fs.readFileSync(file.path, 'utf-8');
-          } else if (file.buffer) {
-            fileText = file.buffer.toString('utf-8');
-          }
-          
-          if (fileText && fileText.length > 50) {
+        } else if (isDocx || isDoc) {
+          // DOC/DOCX: try reading as UTF-8 text
+          const fileText = file.buffer.toString('utf-8');
+          if (fileText.trim().length > 50) {
             const skills = extractSkillsFromResume(fileText);
             extractedData.skills = skills;
             extractedData.text = fileText;
             extractedData.aiConfidenceScore = skills.length > 0 ? 60 : 30;
-            console.log(`[Fallback] Extracted ${skills.length} skills from document`);
+            console.log(`[Fallback] Extracted ${skills.length} skills from DOC buffer`);
           }
         }
       } catch (fallbackError) {
-        console.warn('[Fallback] Could not extract text:', fallbackError.message);
+        console.warn('[Fallback] Extraction error:', fallbackError.message);
+        // Still allow upload to succeed — just without extracted data
       }
     }
 
