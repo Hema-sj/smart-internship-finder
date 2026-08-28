@@ -5,24 +5,24 @@ import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import { fileURLToPath } from 'url';
 import { join, dirname } from 'path';
+import { existsSync } from 'fs';
 
 import { connectDatabase } from './config/database.js';
-import healthRouter       from './routes/healthRoutes.js';
-import authRouter         from './routes/authRoutes.js';
-import internshipRouter   from './routes/internshipRoutes.js';
-import locationRouter     from './routes/locationRoutes.js';
-import studentRouter      from './routes/studentRoutes.js';
-import companyRouter      from './routes/companyRoutes.js';
-import adminRouter        from './routes/adminRoutes.js';
-import reviewRouter       from './routes/reviewRoutes.js';
-import resourceRouter     from './routes/resourceRoutes.js';
-import migrationRouter    from './routes/migrationRoutes.js';
+import healthRouter from './routes/healthRoutes.js';
+import authRouter from './routes/authRoutes.js';
+import internshipRouter from './routes/internshipRoutes.js';
+import locationRouter from './routes/locationRoutes.js';
+import studentRouter from './routes/studentRoutes.js';
+import companyRouter from './routes/companyRoutes.js';
+import adminRouter from './routes/adminRoutes.js';
+import reviewRouter from './routes/reviewRoutes.js';
+import resourceRouter from './routes/resourceRoutes.js';
+import migrationRouter from './routes/migrationRoutes.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-// Only define FRONTEND_DIST in development
-const FRONTEND_DIST = process.env.NODE_ENV !== 'production' 
-  ? join(__dirname, '..', 'frontend', 'dist')
-  : null;
+// Always point to the frontend dist folder (same path in dev and prod)
+const FRONTEND_DIST = join(__dirname, '..', 'frontend', 'dist');
+const hasFrontend = existsSync(FRONTEND_DIST);
 
 const app = express();
 
@@ -62,40 +62,47 @@ app.use('/uploads', express.static('uploads'));
 
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
-app.use('/api/health',       healthRouter);
+app.use('/api/health', healthRouter);
 // Apply rate limiting to auth routes
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 app.use('/api/auth/company/login', authLimiter);
 app.use('/api/auth/company/register', authLimiter);
-app.use('/api/auth',         authRouter);
-app.use('/api/internships',  internshipRouter);
-app.use('/api/locations',    locationRouter);
-app.use('/api/students',     studentRouter);
-app.use('/api/company',      companyRouter);
-app.use('/api/admin',        adminRouter);
-app.use('/api/reviews',      reviewRouter);
-app.use('/api/resources',    resourceRouter);
-app.use('/api/migrate',      migrationRouter);  // Dev only - migration endpoints
+app.use('/api/auth', authRouter);
+app.use('/api/internships', internshipRouter);
+app.use('/api/locations', locationRouter);
+app.use('/api/students', studentRouter);
+app.use('/api/company', companyRouter);
+app.use('/api/admin', adminRouter);
+app.use('/api/reviews', reviewRouter);
+app.use('/api/resources', resourceRouter);
+app.use('/api/migrate', migrationRouter);  // Dev only - migration endpoints
 
 // ─── Serve built React frontend — AFTER API routes ─────────────────────────
-app.use(express.static(FRONTEND_DIST));
+if (hasFrontend) {
+  app.use(express.static(FRONTEND_DIST));
+  console.log(`📂 Serving frontend from ${FRONTEND_DIST}`);
+} else {
+  console.log('ℹ️  No frontend/dist found — running in API-only mode');
+}
 
 // ─── Global error handler ─────────────────────────────────────────────────────
 app.use((error, _request, response, _next) => {
   // Never leak stack traces in production
   const isDev = process.env.NODE_ENV !== 'production';
   console.error('[ERROR]', error.message, error.stack);
-  response.status(error.status || 500).json({ 
+  response.status(error.status || 500).json({
     message: error.message || 'Something went wrong.',
     ...(isDev && { stack: error.stack })
   });
 });
 
 // ─── SPA fallback — serve index.html for all non-API routes ──────────────────
-app.use((_request, response) => {
-  response.sendFile(join(FRONTEND_DIST, 'index.html'));
-});
+if (hasFrontend) {
+  app.use((_request, response) => {
+    response.sendFile(join(FRONTEND_DIST, 'index.html'));
+  });
+}
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 const port = process.env.PORT || 5000;
