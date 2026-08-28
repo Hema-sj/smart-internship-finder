@@ -88,19 +88,19 @@ export default function InternshipTable({
           <thead className="bg-slate-50 sticky top-0 z-10">
             <tr className="border-b border-slate-200">
               <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
-                Starting Date
+                Start Date
               </th>
               <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
-                Application Deadline
+                Deadline
               </th>
               <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
                 Company
               </th>
               <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
-                Company Link
+                Apply Now
               </th>
               <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
-                Course / Role
+                Role
               </th>
               <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
                 Location
@@ -109,19 +109,19 @@ export default function InternshipTable({
                 Duration
               </th>
               <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
-                Internship Mode
+                Mode
               </th>
               <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
-                Compensation
+                Stipend
               </th>
               <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
                 Certificate
               </th>
               <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
-                Required Skills
+                Skills
               </th>
               <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
-                View Details
+                Details
               </th>
             </tr>
           </thead>
@@ -151,32 +151,40 @@ export default function InternshipTable({
 
                   {/* Column 3: Company */}
                   <td className="px-4 py-4">
-                    <button
-                      onClick={() => internship.companyId?._id && navigate(`/company/${internship.companyId._id}`)}
-                      className="flex items-center gap-2 hover:opacity-80 transition"
-                      disabled={!internship.companyId?._id}
-                    >
-                      {internship.displayCompanyLogo && (
-                        <img 
-                          src={internship.displayCompanyLogo} 
-                          alt={internship.displayCompany}
-                          className="h-8 w-8 rounded object-contain"
-                        />
-                      )}
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-semibold text-slate-800 text-sm whitespace-nowrap hover:text-emerald-700">
-                          {internship.displayCompany}
-                        </span>
-                        {internship.displayCompanyVerified && (
-                          <CheckCircle size={12} className="text-emerald-600 shrink-0" />
+                    <div className="flex flex-col gap-1">
+                      <button
+                        onClick={() => internship.companyId?._id && navigate(`/company/${internship.companyId._id}`)}
+                        className="flex items-center gap-2 hover:opacity-80 transition"
+                        disabled={!internship.companyId?._id}
+                      >
+                        {internship.displayCompanyLogo && (
+                          <img 
+                            src={internship.displayCompanyLogo} 
+                            alt={internship.displayCompany}
+                            className="h-8 w-8 rounded object-contain"
+                          />
                         )}
-                        {internship.isDemoData && (
-                          <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 border border-amber-200">
-                            Demo Data
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-slate-800 text-sm whitespace-nowrap hover:text-emerald-700">
+                            {internship.displayCompany}
                           </span>
-                        )}
-                      </div>
-                    </button>
+                          {internship.displayCompanyVerified && (
+                            <CheckCircle size={12} className="text-emerald-600 shrink-0" />
+                          )}
+                          {internship.isDemoData && (
+                            <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 border border-amber-200">
+                              Demo Data
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => navigate(`/company/${encodeURIComponent(internship.displayCompany)}/internships`)}
+                        className="text-xs text-emerald-600 hover:text-emerald-700 font-medium hover:underline text-left"
+                      >
+                        View All Opportunities →
+                      </button>
+                    </div>
                   </td>
 
                   {/* Column 3.5: Company Career Link */}
@@ -277,12 +285,7 @@ export default function InternshipTable({
                     </div>
                   </td>
 
-                  {/* Column 11: AI Match */}
-                  <td className="px-4 py-4 text-sm font-semibold text-emerald-700 whitespace-nowrap">
-                    {internship.displayAIMatch}
-                  </td>
-
-                  {/* Column 12: View Details */}
+                  {/* Column 11: View Details */}
                   <td className="px-4 py-4 text-center whitespace-nowrap">
                     <button
                       onClick={() => onViewDetails(internship)}

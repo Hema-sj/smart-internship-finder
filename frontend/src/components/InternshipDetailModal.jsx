@@ -39,7 +39,11 @@ export default function InternshipDetailModal({ internship, onClose }) {
 
   if (!internship) return null;
 
-  const company = internship.companyId || {};
+  // Get company info from multiple possible sources
+  const company = internship.companyId || internship.company || {};
+  const companyName = company.companyName || company.name || internship.displayCompany || 'Company';
+  const companyWebsite = company.website || company.careersUrl || internship.applicationUrl;
+  
   const summary = getCompensationSummary(internship);
   const stipendDisplay = summary.subtitle
     ? `${summary.amount} ${summary.subtitle}`
@@ -70,21 +74,15 @@ export default function InternshipDetailModal({ internship, onClose }) {
           <div className="flex items-start gap-4 pr-10">
             {/* Company avatar */}
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/20 text-xl font-bold">
-              {(company.name || 'C')[0]}
+              {companyName[0].toUpperCase()}
             </div>
             <div className="min-w-0">
               <h2 className="text-xl font-bold leading-tight">{internship.title}</h2>
               <div className="mt-1 flex flex-wrap items-center gap-2">
-                <span className="font-medium text-emerald-100">{company.name || 'Company'}</span>
+                <span className="font-medium text-emerald-100">{companyName}</span>
                 {company.verified && (
                   <span className="flex items-center gap-0.5 text-xs text-emerald-200">
                     <CheckCircle size={11} /> Verified
-                  </span>
-                )}
-                {/* Demo Internship Badge */}
-                {internship.isVerified === false && (
-                  <span className="flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-semibold text-amber-100 border border-amber-300/30">
-                    <AlertCircle size={10} /> Demo Internship
                   </span>
                 )}
               </div>
@@ -152,7 +150,7 @@ export default function InternshipDetailModal({ internship, onClose }) {
             <div className="p-6">
               <h3 className="mb-1 text-xs font-bold uppercase tracking-widest text-slate-400">Company</h3>
               <div className="mb-4 rounded-xl bg-slate-50 p-4">
-                <p className="font-bold text-slate-800">{company.companyName || company.name}</p>
+                <p className="font-bold text-slate-800">{companyName}</p>
                 {company.location && <p className="mt-0.5 text-xs text-slate-500 flex items-center gap-1"><MapPin size={10}/>{company.location}</p>}
                 {company.rating > 0 && (
                   <p className="mt-1.5 flex items-center gap-1 text-xs text-slate-600">
@@ -161,9 +159,9 @@ export default function InternshipDetailModal({ internship, onClose }) {
                   </p>
                 )}
                 {company.description && <p className="mt-2 text-xs text-slate-500 leading-relaxed">{company.description}</p>}
-                {company.website && (
-                  <a href={company.website} target="_blank" rel="noopener noreferrer" className="mt-2 flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:underline">
-                    <Globe size={11} /> {company.website.replace(/^https?:\/\//, '')}
+                {companyWebsite && (
+                  <a href={companyWebsite} target="_blank" rel="noopener noreferrer" className="mt-2 flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:underline">
+                    <Globe size={11} /> {companyWebsite.replace(/^https?:\/\/(www\.)?/, '')}
                   </a>
                 )}
               </div>

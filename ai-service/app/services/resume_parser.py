@@ -10,8 +10,39 @@ from typing import Dict, List, Any
 
 # ─── PDF extraction ───────────────────────────────────────────────────────────
 def _extract_pdf(file_bytes: bytes) -> str:
+    """Extract text from PDF. If no text found, try OCR on PDF images."""
     from pdfminer.high_level import extract_text
-    return extract_text(io.BytesIO(file_bytes)) or ""
+    
+    text = extract_text(io.BytesIO(file_bytes)) or ""
+    
+    # If PDF has very little text (< 100 chars), it's likely a scanned image
+    if len(text.strip()) < 100:
+        print(f"[PDF] Only {len(text)} chars extracted, trying OCR on PDF images...")
+        try:
+            from pdf2image import convert_from_bytes
+            from PIL import Image
+            import pytesseract
+            import platform
+            
+            # Set Tesseract path for Windows
+            if platform.system() == 'Windows':
+                pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+            
+            # Convert PDF pages to images
+            images = convert_from_bytes(file_bytes, dpi=300)
+            ocr_text = ""
+            
+            for i, image in enumerate(images):
+                page_text = pytesseract.image_to_string(image, lang='eng')
+                ocr_text += f"\n--- Page {i+1} ---\n{page_text}"
+            
+            if len(ocr_text.strip()) > len(text.strip()):
+                print(f"[PDF OCR] Extracted {len(ocr_text)} characters from {len(images)} pages")
+                return ocr_text
+        except Exception as e:
+            print(f"[PDF OCR] Error: {str(e)}")
+    
+    return text
 
 # ─── DOCX extraction ─────────────────────────────────────────────────────────
 def _extract_docx(file_bytes: bytes) -> str:
@@ -25,6 +56,11 @@ def _extract_image_ocr(file_bytes: bytes) -> str:
     try:
         from PIL import Image
         import pytesseract
+        import platform
+        
+        # Set Tesseract path for Windows
+        if platform.system() == 'Windows':
+            pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
         
         image = Image.open(io.BytesIO(file_bytes))
         # Convert to RGB if necessary
@@ -33,6 +69,7 @@ def _extract_image_ocr(file_bytes: bytes) -> str:
         
         # Extract text using OCR
         text = pytesseract.image_to_string(image, lang='eng')
+        print(f"[OCR] Extracted {len(text)} characters from image")
         return text
     except Exception as e:
         print(f"[OCR Error] {str(e)}")

@@ -17,6 +17,7 @@ import Locations               from './pages/Locations';
 import LocationPage            from './pages/LocationPage';
 import CompanyProfilePage      from './pages/CompanyProfilePage';
 import CompanyLinksPage        from './pages/CompanyLinksPage';
+import CompanyInternshipsPage  from './pages/CompanyInternshipsPage';
 import LoginPage               from './pages/LoginPage';
 import RegisterPage            from './pages/RegisterPage';
 import CompanyLoginPage        from './pages/CompanyLoginPage';
@@ -42,6 +43,7 @@ import NotificationsPage       from './pages/NotificationsPage';
 // Company / Admin portals
 import CompanyPortalPage       from './pages/CompanyPortalPage';
 import AdminPortalPage         from './pages/AdminPortalPage';
+import AdminDashboardPage      from './pages/AdminDashboardPage';
 
 // Auth wrapper for student dashboard
 function StudentRoute({ children }) {
@@ -69,6 +71,7 @@ export default function App() {
           <Route path="/locations"      element={<Locations />} />
           <Route path="/locations/:location" element={<LocationPage />} />
           <Route path="/company/:id"    element={<CompanyProfilePage />} />
+          <Route path="/company/:companyName/internships" element={<CompanyInternshipsPage />} />
           <Route path="/login"          element={<LoginPage />} />
           <Route path="/register"       element={<RegisterPage />} />
           <Route path="/company/login"  element={<CompanyLoginPage />} />
@@ -108,6 +111,13 @@ export default function App() {
             <ProtectedRoute>
               <RoleProtectedRoute allowedRoles={['admin']}>
                 <AdminPortalPage />
+              </RoleProtectedRoute>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/dashboard" element={
+            <ProtectedRoute>
+              <RoleProtectedRoute allowedRoles={['admin']}>
+                <AdminDashboardPage />
               </RoleProtectedRoute>
             </ProtectedRoute>
           } />

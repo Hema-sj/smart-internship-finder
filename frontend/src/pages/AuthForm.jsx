@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-const portalPaths = { student: '/dashboard', company: '/company/portal', admin: '/admin/portal' };
+const portalPaths = { student: '/dashboard', company: '/company/portal', admin: '/admin/dashboard' };
 
 export default function AuthForm({ mode, role = 'student' }) {
   const isRegister = mode === 'register';
@@ -19,7 +19,24 @@ export default function AuthForm({ mode, role = 'student' }) {
     try {
       await (isRegister ? register(form, role) : login(form, role));
       navigate(portalPaths[role]);
-    } catch (requestError) { setError(requestError.response?.data?.message || 'Unable to continue. Please try again.'); }
+    } catch (requestError) { 
+      console.error('Login error:', requestError);
+      console.error('Error response:', requestError.response);
+      console.error('Error message:', requestError.message);
+      
+      let errorMsg = 'Unable to continue. Please try again.';
+      if (requestError.response?.data?.message) {
+        errorMsg = requestError.response.data.message;
+      } else if (requestError.message) {
+        errorMsg = `Connection error: ${requestError.message}`;
+      } else if (requestError.code === 'ECONNABORTED') {
+        errorMsg = 'Request timeout. Please check your connection.';
+      } else if (requestError.code === 'ERR_NETWORK') {
+        errorMsg = 'Cannot connect to server. Please check if backend is running.';
+      }
+      
+      setError(errorMsg);
+    }
     finally { setSubmitting(false); }
   }
 

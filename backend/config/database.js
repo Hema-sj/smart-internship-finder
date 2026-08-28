@@ -11,19 +11,19 @@ let sequelize;
 if (databaseUrl) {
   // Use DATABASE_URL (includes all connection info)
   console.log('Using DATABASE_URL for connection');
-  sequelize = new Sequelize(databaseUrl, {
+  
+  // Check if it's a cloud database (needs SSL)
+  const isCloudDB = databaseUrl.includes('neon.tech') || 
+                    databaseUrl.includes('railway') || 
+                    databaseUrl.includes('supabase');
+  
+  const config = {
     dialect: 'postgres',
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
-    dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      }
-    },
     pool: {
-      max: 10,        // Increased from 5
-      min: 2,         // Keep some connections alive
-      acquire: 60000, // Increased from 30000 (60 seconds)
+      max: 10,
+      min: 2,
+      acquire: 60000,
       idle: 10000,
     },
     define: {
@@ -31,7 +31,22 @@ if (databaseUrl) {
       underscored: false,
       freezeTableName: false,
     },
-  });
+  };
+  
+  // Only add SSL for cloud databases
+  if (isCloudDB) {
+    console.log('⚙️  SSL enabled for cloud database');
+    config.dialectOptions = {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
+    };
+  } else {
+    console.log('⚙️  SSL disabled for local database');
+  }
+  
+  sequelize = new Sequelize(databaseUrl, config);
 } else {
   // Use individual env variables (local development)
   console.log('Using individual DB env variables');
