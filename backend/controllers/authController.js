@@ -4,10 +4,11 @@ import { createToken } from '../utils/token.js';
 // ─── Helper: cookie + JSON response ──────────────────────────────────────────
 async function sendAuth(response, user, extra = {}) {
   const token = createToken(user.id);
+  const isProd = process.env.NODE_ENV === 'production';
   response.cookie('accessToken', token, {
     httpOnly: true,
-    sameSite: 'lax',
-    secure:   process.env.NODE_ENV === 'production',
+    sameSite: isProd ? 'none' : 'lax', // 'none' required for cross-domain (Vercel ↔ Render)
+    secure:   isProd,                  // 'none' requires secure:true
     maxAge:   7 * 24 * 60 * 60 * 1000,
   });
   response.status(200).json({
@@ -135,10 +136,11 @@ export async function getCurrentUser(request, response, next) {
 
 // ─── Logout ───────────────────────────────────────────────────────────────────
 export function logout(_request, response) {
+  const isProd = process.env.NODE_ENV === 'production';
   response.clearCookie('accessToken', {
     httpOnly: true,
-    sameSite: 'lax',
-    secure:   process.env.NODE_ENV === 'production',
+    sameSite: isProd ? 'none' : 'lax',
+    secure:   isProd,
   });
   response.status(200).json({ message: 'Logged out successfully.' });
 }
