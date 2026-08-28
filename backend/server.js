@@ -6,8 +6,10 @@ import rateLimit from 'express-rate-limit';
 import { fileURLToPath } from 'url';
 import { join, dirname } from 'path';
 import { existsSync } from 'fs';
+import bcrypt from 'bcrypt';
 
 import { connectDatabase } from './config/database.js';
+import { User } from './models/index.js';
 import healthRouter from './routes/healthRoutes.js';
 import authRouter from './routes/authRoutes.js';
 import internshipRouter from './routes/internshipRoutes.js';
@@ -60,6 +62,29 @@ app.use(express.json());
 app.use(cookieParser());
 app.use('/uploads', express.static('uploads'));
 
+
+// ─── TEMPORARY: One-time admin password reset (remove after use) ──────────────
+app.get('/api/_reset-admin', async (req, res) => {
+  // Guard with a secret token so only you can call this
+  if (req.query.secret !== 'sif-reset-2024') {
+    return res.status(403).json({ message: 'Forbidden' });
+  }
+  try {
+    const hash = await bcrypt.hash('Admin@2024', 10);
+    const [count] = await User.update(
+      { password: hash },
+      { where: { email: 'admin@smartintern.com' }, hooks: false } // hooks:false skips beforeUpdate
+    );
+    if (count === 0) {
+      await User.create({ name: 'Admin User', email: 'admin@smartintern.com', password: 'Admin@2024', role: 'admin' });
+      return res.json({ ok: true, action: 'created', email: 'admin@smartintern.com', password: 'Admin@2024' });
+    }
+    res.json({ ok: true, action: 'updated', email: 'admin@smartintern.com', password: 'Admin@2024', rowsUpdated: count });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// ─── END TEMPORARY ────────────────────────────────────────────────────────────
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.use('/api/health', healthRouter);
