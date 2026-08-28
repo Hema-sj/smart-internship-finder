@@ -431,15 +431,14 @@ export async function uploadResume(request, response, next) {
         } else if (isPDF) {
           // Try to extract text from PDF using pdf-parse
           try {
-            const pdfParse = (await import('pdf-parse')).default;
-            const fs = (await import('fs')).default;
+            // Use dynamic import with workaround for pdf-parse test-file bug
+            const pdfParseModule = await import('pdf-parse/lib/pdf-parse.js').catch(
+              () => import('pdf-parse')
+            );
+            const pdfParse = pdfParseModule.default || pdfParseModule;
             
-            let pdfBuffer;
-            if (file.path && fs.existsSync(file.path)) {
-              pdfBuffer = fs.readFileSync(file.path);
-            } else if (file.buffer) {
-              pdfBuffer = file.buffer;
-            }
+            // With memoryStorage, file.buffer is always available
+            const pdfBuffer = file.buffer;
             
             if (pdfBuffer) {
               const pdfData = await pdfParse(pdfBuffer);

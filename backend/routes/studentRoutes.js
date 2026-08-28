@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
-import { mkdirSync } from 'fs';
 import { requireAuth }    from '../middleware/authMiddleware.js';
 import { requireRole }    from '../middleware/roleMiddleware.js';
 import {
@@ -15,25 +14,10 @@ import {
 
 const router = Router();
 
-// Configure multer for resume uploads
-const UPLOAD_DIR = 'uploads/resumes';
-// Ensure directory exists on startup (Render has ephemeral fs)
-mkdirSync(UPLOAD_DIR, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    // Re-create in case it was wiped mid-run
-    mkdirSync(UPLOAD_DIR, { recursive: true });
-    cb(null, UPLOAD_DIR);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'resume-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
+// ─── Multer — memoryStorage avoids all filesystem issues on Render ─────────────
+// file.buffer is available in the controller instead of file.path
 const upload = multer({
-  storage: storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
   fileFilter: (_req, file, cb) => {
     const allowed = [
@@ -47,6 +31,7 @@ const upload = multer({
     cb(null, allowed.includes(file.mimetype));
   },
 });
+
 
 // All student routes require auth + student role
 router.use(requireAuth, requireRole('student'));
