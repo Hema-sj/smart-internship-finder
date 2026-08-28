@@ -9,6 +9,7 @@ import {
   getSaved, saveInternship, unsaveInternship,
   getNotifications, markNotificationRead, markAllNotificationsRead,
   getResumes, getResumeById, uploadResume, updateResume, deleteResume, generateAIResume, getResumeSWOT,
+  triggerSkillNotifications,
 } from '../controllers/studentController.js';
 
 const router = Router();
@@ -61,6 +62,7 @@ router.delete('/me/saved/:id', unsaveInternship);
 router.get('/me/notifications',               getNotifications);
 router.patch('/me/notifications/read-all',    markAllNotificationsRead);
 router.patch('/me/notifications/:id/read',    markNotificationRead);
+router.post('/me/notify-matches',             triggerSkillNotifications);  // Trigger skill-based notifications
 
 // Resumes
 router.get('/me/resumes',             getResumes);

@@ -162,6 +162,19 @@ export async function getInternships(request, response, next) {
         data.displayCompanyLogo = data.company?.logo || '';
         data.displayCompanyName = data.company?.companyName || 'Unknown';
         data.displaySkills = (data.requiredSkills || []).slice(0, 3);
+        data.displayLocation = data.location || '';  // Add displayLocation
+        data.displayCompany = data.company?.companyName || 'Unknown';  // Add displayCompany
+        data.displayDuration = data.duration || '';  // Add displayDuration
+        data.displayMode = data.mode || '';  // Add displayMode
+        data.displayCompensation = data.compensationType === 'Paid' ? `₹${data.stipend || 0}/month` : 'Unpaid';
+        data.displayCompanyRating = data.company?.rating || 'N/A';
+        data.displayCompanyVerified = data.company?.verified || false;
+        data.displayCourseRole = data.courseRole || data.title || '';
+        data.displayAIMatch = data.aiMatch ? `${data.aiMatch}%` : '0%';
+        
+        // Format dates
+        data.displayStartingDate = data.startingDate ? new Date(data.startingDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'TBA';
+        data.displayDeadline = data.applicationDeadline ? new Date(data.applicationDeadline).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Open';
 
         return data;
       })
@@ -173,13 +186,11 @@ export async function getInternships(request, response, next) {
     }
 
     response.json({
-      internships: internshipsWithMatch,
-      pagination: {
-        total: count,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        pages: Math.ceil(count / limit)
-      },
+      data: internshipsWithMatch,  // Changed from 'internships' to 'data'
+      totalCount: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: parseInt(page),
+      limit: parseInt(limit),
       filters: {
         search, company, location, course, skills, compensation, certificate, startDate
       }
@@ -231,6 +242,24 @@ export async function getInternshipById(request, response, next) {
       data.company._id = data.company.id;
       data.companyId = { ...data.company };  // For nested structure compatibility
     }
+
+    // Format display fields
+    data.displayCompanyLogo = data.company?.logo || '';
+    data.displayCompanyName = data.company?.companyName || 'Unknown';
+    data.displaySkills = (data.requiredSkills || []).slice(0, 3);
+    data.displayLocation = data.location || '';
+    data.displayCompany = data.company?.companyName || 'Unknown';
+    data.displayDuration = data.duration || '';
+    data.displayMode = data.mode || '';
+    data.displayCompensation = data.compensationType === 'Paid' ? `₹${data.stipend || 0}/month` : 'Unpaid';
+    data.displayCompanyRating = data.company?.rating || 'N/A';
+    data.displayCompanyVerified = data.company?.verified || false;
+    data.displayCourseRole = data.courseRole || data.title || '';
+    data.displayAIMatch = data.aiMatch ? `${data.aiMatch}%` : '0%';
+    
+    // Format dates
+    data.displayStartingDate = data.startingDate ? new Date(data.startingDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'TBA';
+    data.displayDeadline = data.applicationDeadline ? new Date(data.applicationDeadline).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Open';
 
     response.json(data);
 
@@ -318,6 +347,44 @@ export async function getApplicationLink(request, response, next) {
 }
 
 /**
+ * GET /api/internships/stats - Get general internship statistics
+ */
+export async function getInternshipStats(request, response, next) {
+  try {
+    const where = {
+      status: 'Approved',
+      applicationStatus: 'Open'
+    };
+
+    // Count total internships
+    const total = await Internship.count({ where });
+
+    // Count paid internships
+    const paid = await Internship.count({
+      where: { ...where, compensationType: 'Paid' }
+    });
+
+    // Count unpaid internships
+    const unpaid = await Internship.count({
+      where: { ...where, compensationType: 'Unpaid' }
+    });
+
+    response.json({
+      total,
+      paid,
+      unpaid,
+      totalInternships: total,
+      paidInternships: paid,
+      unpaidInternships: unpaid
+    });
+
+  } catch (error) {
+    console.error('Get internship stats error:', error);
+    next(error);
+  }
+}
+
+/**
  * GET /api/internships/locations/stats - Get location statistics
  */
 export async function getLocationStats(request, response, next) {
@@ -364,6 +431,7 @@ export async function getLocationStats(request, response, next) {
 export default {
   getInternships,
   getInternshipById,
+  getInternshipStats,
   getLocationStats,
   getApplicationLink
 };

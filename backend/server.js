@@ -16,6 +16,7 @@ import companyRouter      from './routes/companyRoutes.js';
 import adminRouter        from './routes/adminRoutes.js';
 import reviewRouter       from './routes/reviewRoutes.js';
 import resourceRouter     from './routes/resourceRoutes.js';
+import migrationRouter    from './routes/migrationRoutes.js';
 
 const __dirname     = dirname(fileURLToPath(import.meta.url));
 const FRONTEND_DIST = join(__dirname, '..', 'frontend', 'dist');
@@ -71,6 +72,7 @@ app.use('/api/company',      companyRouter);
 app.use('/api/admin',        adminRouter);
 app.use('/api/reviews',      reviewRouter);
 app.use('/api/resources',    resourceRouter);
+app.use('/api/migrate',      migrationRouter);  // Dev only - migration endpoints
 
 // ─── Serve built React frontend — AFTER API routes ─────────────────────────
 app.use(express.static(FRONTEND_DIST));

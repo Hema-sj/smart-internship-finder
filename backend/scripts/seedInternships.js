@@ -278,6 +278,127 @@ const TEMPLATES = [
     description: 'Zoho QA interns build test automation frameworks. Ensure quality of enterprise software used by millions worldwide.',
     companyRating: 4.2
   },
+  // Chennai-specific internships
+  { 
+    title: 'Full Stack Developer Intern', 
+    courseRole: 'Full Stack Development', 
+    compensationType: 'Paid', 
+    stipend: 15000, 
+    mode: 'On-site', 
+    duration: '6 months', 
+    certificateType: 'Both', 
+    certificateProvided: true,
+    certificateDetails: 'Certificate of internship completion with performance evaluation.',
+    certificateConditions: 'Complete minimum 6 months with satisfactory performance.',
+    skills: ['Java', 'Spring Boot', 'React', 'MySQL', 'REST API'], 
+    aiMatch: 88, 
+    description: 'TCS Chennai offers full stack development internships on enterprise applications. Work with Fortune 500 clients on digital transformation projects.',
+    companyRating: 4.0
+  },
+  { 
+    title: 'Software Engineer Intern', 
+    courseRole: 'Software Engineering', 
+    compensationType: 'Paid', 
+    stipend: 18000, 
+    mode: 'On-site', 
+    duration: '6 months', 
+    certificateType: 'Soft Copy', 
+    certificateProvided: true,
+    certificateDetails: 'Digital certificate upon successful completion of training and project.',
+    certificateConditions: 'Complete training modules and deliver assigned project.',
+    skills: ['Java', 'Python', 'SQL', 'Data Structures', 'Algorithms'], 
+    aiMatch: 92, 
+    description: 'Infosys Chennai campus internship program. Get trained by industry experts and work on live client projects in domains like Banking, Healthcare, and Retail.',
+    companyRating: 4.1
+  },
+  { 
+    title: 'Project Engineer Intern', 
+    courseRole: 'Project Engineering', 
+    compensationType: 'Paid', 
+    stipend: 12000, 
+    mode: 'On-site', 
+    duration: '3 months', 
+    certificateType: 'Soft Copy', 
+    certificateProvided: true,
+    certificateDetails: 'Internship completion certificate.',
+    certificateConditions: 'Regular attendance and project submission.',
+    skills: ['C', 'C++', 'Python', 'Linux', 'Problem Solving'], 
+    aiMatch: 85, 
+    description: 'Wipro Chennai internship for engineering students. Work on embedded systems, IoT solutions, and enterprise software development.',
+    companyRating: 3.9
+  },
+  { 
+    title: 'Technical Support Intern', 
+    courseRole: 'Technical Support', 
+    compensationType: 'Paid', 
+    stipend: 10000, 
+    mode: 'On-site', 
+    duration: '3 months', 
+    certificateType: 'Soft Copy', 
+    skills: ['Networking', 'Windows', 'Linux', 'Troubleshooting', 'Customer Service'], 
+    aiMatch: 75, 
+    description: 'HCL Technologies Chennai offers technical support internships. Learn IT infrastructure management and customer support for global clients.',
+    companyRating: 3.8
+  },
+  { 
+    title: 'Business Analyst Intern', 
+    courseRole: 'Business Analysis', 
+    compensationType: 'Paid', 
+    stipend: 15000, 
+    mode: 'Hybrid', 
+    duration: '6 months', 
+    certificateType: 'Both', 
+    certificateProvided: true,
+    certificateDetails: 'Internship certificate with skill assessment report.',
+    certificateConditions: 'Complete 6-month tenure and pass final assessment.',
+    skills: ['SQL', 'Excel', 'Data Analysis', 'Business Intelligence', 'Communication'], 
+    aiMatch: 82, 
+    description: 'Cognizant Chennai business analyst internship. Work with clients across industries to analyze business processes and deliver digital solutions.',
+    companyRating: 4.2
+  },
+  { 
+    title: 'Cloud Infrastructure Intern', 
+    courseRole: 'Cloud Infrastructure', 
+    compensationType: 'Paid', 
+    stipend: 20000, 
+    mode: 'On-site', 
+    duration: '6 months', 
+    certificateType: 'Soft Copy', 
+    skills: ['AWS', 'Azure', 'Linux', 'Networking', 'Python'], 
+    aiMatch: 87, 
+    description: 'Wipro Chennai cloud infrastructure internship. Build and manage cloud environments for enterprise clients across AWS and Azure platforms.',
+    companyRating: 3.9
+  },
+  { 
+    title: 'Database Administrator Intern', 
+    courseRole: 'Database Administration', 
+    compensationType: 'Paid', 
+    stipend: 14000, 
+    mode: 'On-site', 
+    duration: '4 months', 
+    certificateType: 'Soft Copy', 
+    skills: ['SQL', 'MySQL', 'PostgreSQL', 'Oracle', 'Database Design'], 
+    aiMatch: 80, 
+    description: 'TCS Chennai DBA internship. Learn database administration, performance tuning, backup and recovery for enterprise databases.',
+    companyRating: 4.0
+  },
+  { 
+    title: 'AI/ML Intern', 
+    courseRole: 'Artificial Intelligence', 
+    compensationType: 'Paid', 
+    stipend: 25000, 
+    mode: 'On-site', 
+    duration: '6 months', 
+    certificateType: 'Both', 
+    certificateProvided: true,
+    certificateDetails: 'Certificate with project completion letter from project mentor.',
+    certificateConditions: 'Deliver ML model with minimum 85% accuracy.',
+    skills: ['Python', 'Machine Learning', 'TensorFlow', 'Deep Learning', 'NLP'], 
+    aiMatch: 94, 
+    description: 'Infosys Chennai AI/ML internship. Work on cutting-edge AI solutions including computer vision, NLP, and predictive analytics for enterprise clients.',
+    companyRating: 4.1
+  },
+
   { 
     title: 'Mobile Development Intern', 
     courseRole: 'Mobile Development', 
@@ -367,7 +488,7 @@ async function seed() {
       website: 'https://www.amazon.com', 
       industry: 'E-commerce & Technology', 
       description: 'Amazon is the world\'s largest online retailer and a leading cloud computing provider through AWS.',
-      logo: null,
+      logo: 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg',
       careersUrl: 'https://www.amazon.jobs/en/business_categories/student-programs',
       verified_status: 'approved'
     },
@@ -377,7 +498,7 @@ async function seed() {
       website: 'https://www.microsoft.com', 
       industry: 'Technology', 
       description: 'Microsoft develops, manufactures, licenses, and supports software, services, devices, and solutions worldwide.',
-      logo: null,
+      logo: 'https://upload.wikimedia.org/wikipedia/commons/9/96/Microsoft_logo_%282012%29.svg',
       careersUrl: 'https://careers.microsoft.com/students/',
       verified_status: 'approved'
     },
@@ -387,7 +508,7 @@ async function seed() {
       website: 'https://www.zoho.com', 
       industry: 'Software', 
       description: 'Zoho Corporation provides business software used by 100M+ users globally, including CRM, productivity, and collaboration tools.',
-      logo: null,
+      logo: 'https://www.zoho.com/sites/zweb/images/ogimage/zoho-logo.png',
       careersUrl: 'https://careers.zohocorp.com/recruitment/careers.html',
       verified_status: 'approved'
     },
@@ -397,7 +518,7 @@ async function seed() {
       website: 'https://www.ibm.com', 
       industry: 'Technology & Consulting', 
       description: 'IBM is a global technology and consulting company providing hardware, software, cloud-based services, and cognitive computing.',
-      logo: null,
+      logo: 'https://upload.wikimedia.org/wikipedia/commons/5/51/IBM_logo.svg',
       careersUrl: 'https://www.ibm.com/careers/internship',
       verified_status: 'approved'
     },
@@ -407,7 +528,7 @@ async function seed() {
       website: 'https://www.cisco.com', 
       industry: 'Networking & Technology', 
       description: 'Cisco is the worldwide leader in IT and networking, helping companies of all sizes transform how people connect, communicate and collaborate.',
-      logo: null,
+      logo: 'https://upload.wikimedia.org/wikipedia/commons/0/08/Cisco_logo_blue_2016.svg',
       careersUrl: 'https://jobs.cisco.com/jobs/SearchJobs/?listFilterMode=1&21180=%5B202648%5D',
       verified_status: 'approved'
     },
@@ -417,8 +538,58 @@ async function seed() {
       website: 'https://www.freshworks.com', 
       industry: 'SaaS', 
       description: 'Freshworks provides innovative customer engagement software for businesses of all sizes, making it easy for teams to acquire, engage and support customers.',
-      logo: null,
+      logo: 'https://www.freshworks.com/static-assets/images/common/company/logos/logo-gradient.svg',
       careersUrl: 'https://www.freshworks.com/company/careers/',
+      verified_status: 'approved'
+    },
+    { 
+      companyName: 'TCS', 
+      location: 'Chennai', 
+      website: 'https://www.tcs.com', 
+      industry: 'IT Services & Consulting', 
+      description: 'Tata Consultancy Services (TCS) is an IT services, consulting and business solutions organization that delivers real results to global businesses.',
+      logo: 'https://www.tcs.com/content/dam/global-tcs/en/images/logo/tata-consultancy-services-logo.png',
+      careersUrl: 'https://www.tcs.com/careers/freshers',
+      verified_status: 'approved'
+    },
+    { 
+      companyName: 'Infosys', 
+      location: 'Chennai', 
+      website: 'https://www.infosys.com', 
+      industry: 'IT Services & Consulting', 
+      description: 'Infosys is a global leader in next-generation digital services and consulting. We enable clients in more than 50 countries to navigate their digital transformation.',
+      logo: 'https://www.infosys.com/content/dam/infosys-web/en/global-resource/media-resources/infosys-logo-svg.svg',
+      careersUrl: 'https://www.infosys.com/careers/students.html',
+      verified_status: 'approved'
+    },
+    { 
+      companyName: 'Wipro', 
+      location: 'Chennai', 
+      website: 'https://www.wipro.com', 
+      industry: 'IT Services & Consulting', 
+      description: 'Wipro Limited is a leading technology services and consulting company focused on building innovative solutions that address clients\' most complex digital transformation needs.',
+      logo: 'https://upload.wikimedia.org/wikipedia/commons/a/a0/Wipro_Primary_Logo_Color_RGB.svg',
+      careersUrl: 'https://careers.wipro.com/careers-home/jobs?domain=Students',
+      verified_status: 'approved'
+    },
+    { 
+      companyName: 'HCL Technologies', 
+      location: 'Chennai', 
+      website: 'https://www.hcltech.com', 
+      industry: 'IT Services', 
+      description: 'HCL Technologies is a next-generation global technology company that helps enterprises reimagine their businesses for the digital age.',
+      logo: 'https://www.hcltech.com/themes/custom/hcltech/logo.svg',
+      careersUrl: 'https://www.hcltech.com/careers/freshers',
+      verified_status: 'approved'
+    },
+    { 
+      companyName: 'Cognizant', 
+      location: 'Chennai', 
+      website: 'https://www.cognizant.com', 
+      industry: 'IT Services & Consulting', 
+      description: 'Cognizant is one of the world\'s leading professional services companies, transforming clients\' business, operating and technology models for the digital era.',
+      logo: 'https://upload.wikimedia.org/wikipedia/commons/9/9b/Cognizant_logo_2022.svg',
+      careersUrl: 'https://careers.cognizant.com/in/en/students',
       verified_status: 'approved'
     },
   ];
@@ -434,7 +605,7 @@ async function seed() {
 
   const internships = TEMPLATES.map((t, i) => {
     // Determine which company and location for this internship
-    const companyNames = ['Google', 'Amazon', 'Microsoft', 'Zoho', 'IBM', 'Cisco', 'Freshworks'];
+    const companyNames = ['Google', 'Amazon', 'Microsoft', 'Zoho', 'IBM', 'Cisco', 'Freshworks', 'TCS', 'Infosys', 'Wipro', 'HCL Technologies', 'Cognizant'];
     const locations = ['Bangalore', 'Hyderabad', 'Chennai', 'Coimbatore', 'Pune', 'Mumbai', 'Delhi', 'Remote'];
     
     const companyName = companyNames[i % companyNames.length];

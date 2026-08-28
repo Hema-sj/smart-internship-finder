@@ -11,6 +11,8 @@ import {
   Internship, 
   Company 
 } from '../models/index.js';
+import { notifyStudentOfMatchingInternships } from '../services/notificationService.js';
+import { extractSkillsFromResume } from '../utils/skillExtractor.js';
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
 async function getProfile(userId) {
@@ -45,6 +47,18 @@ export async function updateMyProfile(request, response, next) {
     if (!updated) return response.status(404).json({ message: 'Profile not found.' });
     
     const profile = await StudentProfile.findOne({ where: { userId: request.user.id } });
+    
+    // If skills were updated, trigger skill-based notifications
+    if (request.body.skills && request.body.skills.length > 0) {
+      try {
+        await notifyStudentOfMatchingInternships(profile, 50);  // 50% match threshold
+        console.log('[Student Profile] Triggered skill-match notifications for student:', profile.id);
+      } catch (notifError) {
+        console.error('[Student Profile] Failed to create notifications:', notifError);
+        // Don't fail the profile update if notifications fail
+      }
+    }
+    
     response.json(profile);
   } catch (error) { 
     console.error('Update profile error:', error);
@@ -369,32 +383,108 @@ export async function uploadResume(request, response, next) {
     };
 
     try {
-      const FormData = (await import('form-data')).default;
       const fs = (await import('fs')).default;
-      const formData = new FormData();
+      const { Blob } = await import('buffer');
       
-      // Read file from disk if available, otherwise use buffer
-      if (file.path) {
-        formData.append('file', fs.createReadStream(file.path), file.originalname);
+      let fileBlob;
+      if (file.path && fs.existsSync(file.path)) {
+        const fileBuffer = fs.readFileSync(file.path);
+        fileBlob = new Blob([fileBuffer], { type: file.mimetype });
+      } else if (file.buffer) {
+        fileBlob = new Blob([file.buffer], { type: file.mimetype });
       } else {
-        formData.append('file', file.buffer, { filename: file.originalname });
+        throw new Error('No file data available');
       }
+
+      // Use native FormData (Node 18+)
+      const formData = new FormData();
+      formData.append('file', fileBlob, file.originalname);
 
       const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
       const aiResponse = await fetch(`${aiServiceUrl}/api/resume/parse`, {
         method: 'POST',
         body: formData,
-        headers: formData.getHeaders(),
       });
 
       if (aiResponse.ok) {
         extractedData = await aiResponse.json();
+        console.log(`[AI Service] Successfully extracted ${extractedData.skills?.length || 0} skills`);
+        console.log(`[AI Service] Text length: ${extractedData.text?.length || 0} characters`);
+        console.log(`[AI Service] Text preview:`, extractedData.text?.substring(0, 200) || 'No text');
       } else {
-        console.warn('[AI Service] Resume parsing failed with status:', aiResponse.status);
+        const errorText = await aiResponse.text();
+        console.warn('[AI Service] Resume parsing failed:', aiResponse.status, errorText);
       }
     } catch (aiError) {
       console.warn('[AI Service] Resume parsing error:', aiError.message);
-      // Continue without AI data — graceful fallback
+      // Fallback: Try to extract text and skills manually
+      try {
+        // Check if file is an image - images require AI service for OCR
+        const isImage = file.mimetype.startsWith('image/');
+        const isPDF = file.mimetype === 'application/pdf';
+        
+        if (isImage) {
+          console.warn('[Fallback] Image files require AI service for text extraction (OCR)');
+          extractedData.text = 'Image file - requires AI service for OCR. Please ensure AI service is running.';
+          extractedData.aiConfidenceScore = 0;
+          extractedData.skills = [];
+        } else if (isPDF) {
+          // Try to extract text from PDF using pdf-parse
+          try {
+            const pdfParse = (await import('pdf-parse')).default;
+            const fs = (await import('fs')).default;
+            
+            let pdfBuffer;
+            if (file.path && fs.existsSync(file.path)) {
+              pdfBuffer = fs.readFileSync(file.path);
+            } else if (file.buffer) {
+              pdfBuffer = file.buffer;
+            }
+            
+            if (pdfBuffer) {
+              const pdfData = await pdfParse(pdfBuffer);
+              const pdfText = pdfData.text;
+              
+              // Check if PDF has actual text or is just a scanned image
+              if (pdfText && pdfText.trim().length > 50) {
+                const skills = extractSkillsFromResume(pdfText);
+                extractedData.skills = skills;
+                extractedData.text = pdfText;
+                extractedData.aiConfidenceScore = skills.length > 0 ? 70 : 40;
+                console.log(`[Fallback PDF] Extracted ${skills.length} skills from PDF`);
+              } else {
+                // PDF has no text - it's likely a scanned image, needs OCR
+                console.warn('[Fallback PDF] PDF has no readable text - likely a scanned image. OCR required.');
+                extractedData.text = 'PDF appears to be a scanned image. Please use a text-based PDF or upload as an image (JPG/PNG) for OCR processing.';
+                extractedData.aiConfidenceScore = 0;
+                extractedData.skills = [];
+              }
+            }
+          } catch (pdfError) {
+            console.warn('[Fallback PDF] Error:', pdfError.message);
+          }
+        } else {
+          // Try to read DOC/DOCX as text
+          const fs = (await import('fs')).default;
+          let fileText = '';
+          
+          if (file.path && fs.existsSync(file.path)) {
+            fileText = fs.readFileSync(file.path, 'utf-8');
+          } else if (file.buffer) {
+            fileText = file.buffer.toString('utf-8');
+          }
+          
+          if (fileText && fileText.length > 50) {
+            const skills = extractSkillsFromResume(fileText);
+            extractedData.skills = skills;
+            extractedData.text = fileText;
+            extractedData.aiConfidenceScore = skills.length > 0 ? 60 : 30;
+            console.log(`[Fallback] Extracted ${skills.length} skills from document`);
+          }
+        }
+      } catch (fallbackError) {
+        console.warn('[Fallback] Could not extract text:', fallbackError.message);
+      }
     }
 
     const resume = await Resume.create({
@@ -682,5 +772,38 @@ export async function generateAIResume(request, response, next) {
   } catch (error) { 
     console.error('Generate AI resume error:', error);
     next(error); 
+  }
+}
+
+
+// ─── Skill-Based Notifications ───────────────────────────────────────────────
+
+/**
+ * POST /api/students/me/notify-matches
+ * Manually trigger skill-based internship matching notifications
+ * Useful for testing or when student wants to refresh their matches
+ */
+export async function triggerSkillNotifications(request, response, next) {
+  try {
+    const profile = await getProfile(request.user.id);
+    if (!profile) return response.status(404).json({ message: 'Profile not found.' });
+
+    if (!profile.skills || profile.skills.length === 0) {
+      return response.status(400).json({ 
+        message: 'Please add skills to your profile first to receive match notifications.' 
+      });
+    }
+
+    // Trigger notifications
+    const result = await notifyStudentOfMatchingInternships(profile, 50);
+    
+    response.json({
+      success: true,
+      message: result.message,
+      notificationsCreated: result.notified
+    });
+  } catch (error) {
+    console.error('Trigger skill notifications error:', error);
+    next(error);
   }
 }
