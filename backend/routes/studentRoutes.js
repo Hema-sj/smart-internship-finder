@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
+import { mkdirSync } from 'fs';
 import { requireAuth }    from '../middleware/authMiddleware.js';
 import { requireRole }    from '../middleware/roleMiddleware.js';
 import {
@@ -15,9 +16,15 @@ import {
 const router = Router();
 
 // Configure multer for resume uploads
+const UPLOAD_DIR = 'uploads/resumes';
+// Ensure directory exists on startup (Render has ephemeral fs)
+mkdirSync(UPLOAD_DIR, { recursive: true });
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/resumes/');
+    // Re-create in case it was wiped mid-run
+    mkdirSync(UPLOAD_DIR, { recursive: true });
+    cb(null, UPLOAD_DIR);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
